@@ -54,7 +54,7 @@ export interface AppState {
   uniqueLargeToday: { tankers: number; cargo: number };
   headlines: Headline[];
   events: HormuzEvent[];
-  ais: { disabled: boolean; connected: boolean; lastMsgTs: number | null; msgCount: number };
+  ais: { disabled: boolean; connected: boolean; lastMsgTs: number | null; msgCount: number; streaming: boolean };
   jobs: Record<string, { lastSuccess: number | null; lastError: number | null; lastErrorMsg: string | null }>;
 }
 

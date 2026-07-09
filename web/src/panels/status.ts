@@ -24,6 +24,10 @@ export async function init(s: AppState): Promise<void> {
   if (s.ais.disabled) {
     const ticker = document.getElementById('ticker')!;
     ticker.innerHTML = `<li class="muted">${t('ais.disabled')}</li>`;
+  } else if (s.ais.connected && !s.ais.streaming) {
+    // subscribed but nothing broadcasting — regional receiver blackout
+    const ticker = document.getElementById('ticker')!;
+    ticker.innerHTML = `<li class="muted">${t('ais.noCoverage')}</li>`;
   }
 
   const transits = await getTransits(30);

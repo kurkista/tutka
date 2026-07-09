@@ -22,6 +22,7 @@
   "ticker.in": "→ Persianlahdelle",
   "ticker.out": "→ avomerelle",
   "ais.disabled": "Live-AIS-taso pois päältä (API-avain puuttuu)",
+  "ais.noCoverage": "AIS-yhteys toimii, mutta Persianlahden alueen maa-asemat eivät juuri nyt raportoi — kriisin aiheuttama katvealue. Läpikulkudata tulee IMF PortWatchista.",
   "ais.reconnecting": "AIS-yhteys muodostetaan uudelleen…",
   "markets.brentTitle": "Brent-raakaöljy (USD/tynnyri)",
   "markets.oddsTitle": "Ennustemarkkina",

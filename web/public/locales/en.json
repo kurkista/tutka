@@ -22,6 +22,7 @@
   "ticker.in": "→ into the Gulf",
   "ticker.out": "→ out to sea",
   "ais.disabled": "Live AIS layer is off (no API key configured)",
+  "ais.noCoverage": "AIS stream connected, but no terrestrial receivers are reporting from the Gulf region right now — mid-crisis blackout. Transit data comes from IMF PortWatch.",
   "ais.reconnecting": "AIS stream reconnecting…",
   "markets.brentTitle": "Brent crude (USD/bbl)",
   "markets.oddsTitle": "Prediction market",

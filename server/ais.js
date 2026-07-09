@@ -96,5 +96,9 @@ export function aisStatus() {
     connected: state.connected,
     lastMsgTs: state.lastMsgTs || null,
     msgCount: state.msgCount,
+    // connected-but-silent = AISStream has no receiver coverage for the
+    // region (observed for the whole Middle East on 2026-07-09, mid-crisis).
+    // The UI shows this as "receivers dark", not as "no ships".
+    streaming: state.msgCount > 0,
   };
 }

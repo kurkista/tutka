@@ -66,6 +66,11 @@ hpi-v1).
   positions are invisible here. The index measures *visible commercial
   traffic*, which is exactly what "is it open for normal shipping" means — but
   it is not total oil flow.
+- **Regional AIS blackouts happen.** On 2026-07-09 we verified that AISStream's
+  terrestrial network had **zero coverage for the entire Middle East region**
+  (a Baltic control box streamed normally) — receivers dark mid-crisis. When
+  this happens the map says so explicitly, and the index is unaffected because
+  its transit component uses IMF PortWatch, not our AIS feed.
 - **Polymarket markets rotate.** Date-bounded markets mechanically drift as
   the deadline nears and get replaced when they resolve; the config pins the
   slug and the changelog records switches.
