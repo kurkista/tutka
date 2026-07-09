@@ -71,6 +71,14 @@ hpi-v1).
   (a Baltic control box streamed normally) — receivers dark mid-crisis. When
   this happens the map says so explicitly, and the index is unaffected because
   its transit component uses IMF PortWatch, not our AIS feed.
+- **Why we show fewer ships/flights than MarineTraffic/FlightRadar24.** Those
+  commercial trackers pay for satellite AIS/ADS-B coverage (e.g. Aireon,
+  exactEarth) on top of their own ground-receiver networks, which sees vessels
+  and aircraft over open water and deserts with no volunteer receiver nearby.
+  AISStream and OpenSky's free tiers are ground-receiver data only — real
+  positions, just a sparser, patchier slice of them. It's the same root cause
+  as the AIS blackout above, just less binary: coverage fades gradually with
+  distance from land, rather than going fully dark.
 - **Polymarket markets rotate.** Date-bounded markets mechanically drift as
   the deadline nears and get replaced when they resolve; the config pins the
   slug and the changelog records switches.
@@ -86,6 +94,7 @@ hpi-v1).
 | Source | What | Cost/terms |
 |---|---|---|
 | AISStream.io | live AIS, Hormuz bbox | free tier, non-commercial |
+| OpenSky Network | live flights, wider Gulf bbox | free registered account, ground ADS-B |
 | IMF PortWatch | official daily transit calls (chokepoint6) | open data |
 | Polymarket Gamma API | prediction-market odds | public, read-only |
 | GDELT DOC 2.0 | news volume/tone/headlines | free, ≥5 s between calls |

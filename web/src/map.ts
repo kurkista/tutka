@@ -140,21 +140,35 @@ export function initMap(container: HTMLElement, initial: Vessel[], initialFlight
       paint: { 'icon-color': colorByCat, 'icon-opacity': 0.95 },
     });
 
-    // flight layer (OpenSky), toggleable, above vessels
+    // flight layer (OpenSky), toggleable, above vessels. A soft halo behind
+    // the arrow keeps small aircraft symbols visible against the dark basemap
+    // at low zoom, where a plain icon-size 0.3 arrow reads as an empty map.
     map.addSource('flights', { type: 'geojson', data: flightsFC() });
+    map.addLayer({
+      id: 'flight-halo',
+      type: 'circle',
+      source: 'flights',
+      layout: { visibility: flightsVisible ? 'visible' : 'none' },
+      paint: {
+        'circle-color': FLIGHT_COLOR,
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, 5, 10, 9],
+        'circle-opacity': 0.25,
+        'circle-blur': 0.6,
+      },
+    });
     map.addLayer({
       id: 'flight-arrows',
       type: 'symbol',
       source: 'flights',
       layout: {
         'icon-image': 'vessel-arrow',
-        'icon-size': ['interpolate', ['linear'], ['zoom'], 6, 0.3, 10, 0.55],
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 6, 0.55, 10, 0.95],
         'icon-rotate': ['get', 'trk'],
         'icon-rotation-alignment': 'map',
         'icon-allow-overlap': true,
         visibility: flightsVisible ? 'visible' : 'none',
       },
-      paint: { 'icon-color': FLIGHT_COLOR, 'icon-opacity': 0.75 },
+      paint: { 'icon-color': FLIGHT_COLOR, 'icon-opacity': 0.95 },
     });
     map.on('click', 'flight-arrows', (e) => {
       const f = e.features?.[0];
@@ -218,7 +232,9 @@ function addLegend(container: HTMLElement) {
   container.appendChild(el);
   el.querySelector<HTMLInputElement>('#flights-toggle')!.addEventListener('change', (e) => {
     flightsVisible = (e.target as HTMLInputElement).checked;
-    map.setLayoutProperty('flight-arrows', 'visibility', flightsVisible ? 'visible' : 'none');
+    const vis = flightsVisible ? 'visible' : 'none';
+    map.setLayoutProperty('flight-halo', 'visibility', vis);
+    map.setLayoutProperty('flight-arrows', 'visibility', vis);
   });
 }
 

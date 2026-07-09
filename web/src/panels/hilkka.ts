@@ -1,4 +1,4 @@
-// panels/hilkka.ts — the "Hilkka & Suomi" drawer: plain-language costs for an
+// panels/hilkka.ts — the "Kerttu & Suomi" drawer: plain-language costs for an
 // average Finnish household, plus national fast proxies. All arithmetic is
 // server-side (/api/hilkka); this file only formats and translates.
 import { t, fmtNum, fmtDate } from '../i18n';

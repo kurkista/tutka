@@ -14,7 +14,7 @@ the **Hormuz Passability Index (HPI)**:
 - 🗞️ **Politics** — GDELT news pressure, tone, and hand-curated event
   annotations on the price chart
 - 🇫🇮 **Finland** — what it means for fuel pumps, electricity and daily life
-  ("Hilkka & Suomi" layer)
+  ("Kerttu & Suomi" layer)
 
 Every component of the index is visible, versioned and explained —
 see **[METHODOLOGY.md](METHODOLOGY.md)** (also rendered inside the app).
