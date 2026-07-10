@@ -46,7 +46,26 @@
       </section>
     </aside>
 
-    <div id="map"></div>
+    <div id="center">
+      <div id="center-toolbar">
+        <div class="view-toggle" role="tablist">
+          <button id="view-timeline-btn" class="view-btn active" data-i18n="timeline.title">Timeline</button>
+          <button id="view-map-btn" class="view-btn" data-i18n="nav.map">Map</button>
+        </div>
+        <div id="range-toggle" class="range-toggle">
+          <button class="range-btn" data-days="1" data-i18n="timeline.range24h">24H</button>
+          <button class="range-btn active" data-days="7" data-i18n="timeline.range7d">7D</button>
+          <button class="range-btn" data-days="30" data-i18n="timeline.range30d">30D</button>
+        </div>
+      </div>
+      <div id="timeline-view">
+        <p class="fineprint" data-i18n="timeline.explainer">Every series we hold real history for, overlaid on one 0–100 index so you can see what moves together — hover any line for its real value and unit, click a legend entry to hide it. Dashed lines mark the same hand-curated events as the Brent chart. Ships/flights history only started accumulating on launch day, so those two are short for now.</p>
+        <div id="timeline-chart"></div>
+      </div>
+      <div id="map-view" hidden>
+        <div id="map"></div>
+      </div>
+    </div>
 
     <aside id="right" class="panel">
       <section>
@@ -59,7 +78,7 @@
         <p class="fineprint" id="poly-desc" data-i18n="markets.oddsDesc">Polymarket: traffic returns to normal by Jul 31</p>
       </section>
       <section id="suomi-card">
-        <h2>🇫🇮 <span data-i18n="hilkka.tab">Kerttu &amp; Suomi</span></h2>
+        <h2>🇫🇮 <span data-i18n="hilkka.tab">Finland impact</span></h2>
         <ul id="suomi-card-lines" class="hilkka-lines"><li class="muted">…</li></ul>
         <p class="fineprint"><a href="#" id="suomi-card-more" data-i18n="hilkka.more">Full breakdown →</a></p>
       </section>
@@ -73,14 +92,7 @@
   </main>
 
   <div id="bottom-tabs">
-    <button id="timeline-tab" class="bottom-tab" aria-expanded="false">📈 <span data-i18n="timeline.tab">Timeline</span></button>
-    <button id="hilkka-tab" class="bottom-tab" aria-expanded="false">🇫🇮 <span data-i18n="hilkka.tab">Kerttu &amp; Suomi</span></button>
-  </div>
-
-  <div id="timeline-drawer" class="drawer" hidden>
-    <h2 data-i18n="timeline.title">Timeline</h2>
-    <p class="fineprint" data-i18n="timeline.explainer">Every series we hold real history for, overlaid on one 0–100 index so you can see what moves together — hover any line for its real value and unit, click a legend entry to hide it. Dashed lines mark the same hand-curated events as the Brent chart. Ships/flights history only started accumulating on launch day, so those two are short for now.</p>
-    <div id="timeline-chart"></div>
+    <button id="hilkka-tab" class="bottom-tab" aria-expanded="false">🇫🇮 <span data-i18n="hilkka.tab">Finland impact</span></button>
   </div>
 
   <div id="hilkka-drawer" class="drawer" hidden>

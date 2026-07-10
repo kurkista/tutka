@@ -7,6 +7,13 @@
     "url": "https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_crisis"
   },
   {
+    "ts": "2026-06-14T18:00:00Z",
+    "type": "statement",
+    "en": "Trump posts deal is \"complete\" (\"Let the oil flow!\"); Brent falls ~5% to $83.17",
+    "fi": "Trump julistaa somessa sopimuksen \"valmiiksi\" (\"Let the oil flow!\"); Brent laskee ~5 % 83,17 dollariin",
+    "url": "https://www.cnbc.com/2026/06/14/oil-price-iran-war-strait-hormuz-peace-deal.html"
+  },
+  {
     "ts": "2026-06-17T12:00:00Z",
     "type": "statement",
     "en": "US–Iran framework agreement on reopening the strait",
@@ -19,5 +26,12 @@
     "en": "War-risk insurance stays ~8× pre-crisis; shippers hesitant despite deal",
     "fi": "Sotariskivakuutukset yhä ~8-kertaiset; varustamot epäröivät sopimuksesta huolimatta",
     "url": "https://fortune.com/2026/06/20/shipping-companies-insurance-strait-of-hormuz-traffic-us-iran-deal/"
+  },
+  {
+    "ts": "2026-07-08T14:00:00Z",
+    "type": "statement",
+    "en": "Trump threatens to bomb Iran again and reimpose the naval blockade; Brent jumps ~5% to $78.02",
+    "fi": "Trump uhkaa pommittaa Irania uudelleen ja palauttaa laivastosaarron; Brent nousee ~5 % 78,02 dollariin",
+    "url": "https://www.cnbc.com/2026/07/08/oil-prices-brent-wti-iran-us-hormuz.html"
   }
 ]

@@ -217,6 +217,12 @@ export function updateFlights(data: { aircraft: Aircraft[] }): void {
   (map.getSource('flights') as maplibregl.GeoJSONSource | undefined)?.setData(flightsFC());
 }
 
+/** The map view is toggled hidden/visible now (not always on screen); MapLibre
+ * needs an explicit resize when its container regains a real size. */
+export function resizeMap(): void {
+  map?.resize();
+}
+
 export const vesselCount = () => vessels.size;
 
 function addLegend(container: HTMLElement) {

@@ -2,7 +2,7 @@ import './styles.css';
 import { initI18n } from './i18n';
 import { getState } from './api';
 import { connectSSE } from './sse';
-import { initMap, updateVessels, updateFlights } from './map';
+import { initMap, updateVessels, updateFlights, resizeMap } from './map';
 import * as status from './panels/status';
 import * as markets from './panels/markets';
 import * as hilkka from './panels/hilkka';
@@ -20,9 +20,10 @@ async function boot() {
   layers.init(state);
   await markets.init(state);
   await hilkka.init();
-  timeline.init(state);
+  await timeline.init(state);
   initMethodology();
   welcome.init();
+  initViewToggle();
 
   connectSSE({
     vessels: (delta) => { updateVessels(delta); layers.onVessels(delta); },
@@ -31,6 +32,27 @@ async function boot() {
     metric: (m) => { markets.onMetric(m); hilkka.onMetric(m); layers.onMetric(m); },
     headline: (h) => { markets.onHeadline(h); layers.onHeadline(); },
     flights: (data) => { updateFlights(data); layers.onFlights(data); },
+  });
+}
+
+function initViewToggle(): void {
+  const timelineBtn = document.getElementById('view-timeline-btn')!;
+  const mapBtn = document.getElementById('view-map-btn')!;
+  const timelineView = document.getElementById('timeline-view')!;
+  const mapView = document.getElementById('map-view')!;
+
+  timelineBtn.addEventListener('click', () => {
+    timelineBtn.classList.add('active');
+    mapBtn.classList.remove('active');
+    timelineView.hidden = false;
+    mapView.hidden = true;
+  });
+  mapBtn.addEventListener('click', () => {
+    mapBtn.classList.add('active');
+    timelineBtn.classList.remove('active');
+    mapView.hidden = false;
+    timelineView.hidden = true;
+    resizeMap();
   });
 }
 
