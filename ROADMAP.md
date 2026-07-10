@@ -1,8 +1,9 @@
 # tutka roadmap — scouted domains, not yet built
 
-This documents the domains identified alongside domains 1 (Hormuz, built) and
-3 (Information environment, built) so the taxonomy work isn't lost, even
-though only two domains are actually implemented. Each entry is scoped at
+This documents the domains identified alongside domains 1 (State & military
+tension — Nordic/Baltic-Russia, built) and 3 (Information environment, built)
+so the taxonomy work isn't lost, even though only two domains are actually
+implemented. Each entry is scoped at
 "what data sources exist and roughly what the index would measure" — not
 implementation detail. See [README.md](README.md) for the full six-domain
 table and [METHODOLOGY.md](METHODOLOGY.md) for how the built domains work.

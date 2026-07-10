@@ -56,7 +56,7 @@
   "hilkka.tank": "Petrol (E95) is {price} €/L — filling a {liters} L tank costs {delta} vs pre-crisis February",
   "hilkka.driving": "Driving {km} km/month costs {delta} per month extra in petrol",
   "hilkka.diesel": "Diesel is {price} €/L — a tank costs {delta} vs February",
-  "hilkka.elec": "Spot electricity right now: {now} c/kWh (30-day average {avg} c/kWh) — Finland's power mix makes the Hormuz link weak; we chart it to test the correlation",
+  "hilkka.elec": "Spot electricity right now: {now} c/kWh (30-day average {avg} c/kWh) — Finland's power mix makes the tension link weak; we chart it to test the correlation",
   "hilkka.brent": "Brent crude is {pct} % vs its pre-crisis February average",
   "hilkka.persona": "Kerttu Korhonen drives a petrol car ({liters} L/100 km, {km} km/month). Pump prices: Statistics Finland monthly averages, latest {month}.",
   "hilkka.lag": "Fast proxies react in minutes; national statistics lag months — and many other things move them too.",

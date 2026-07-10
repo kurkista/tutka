@@ -55,7 +55,7 @@
   "hilkka.tank": "Bensa (E95) maksaa {price} €/l — {liters} litran tankillinen maksaa {delta} enemmän kuin helmikuussa ennen kriisiä",
   "hilkka.driving": "{km} km kuukaudessa ajavalle bensakulut ovat {delta} kuukaudessa suuremmat",
   "hilkka.diesel": "Diesel maksaa {price} €/l — tankillinen {delta} vs. helmikuu",
-  "hilkka.elec": "Pörssisähkö juuri nyt: {now} c/kWh (30 pv keskiarvo {avg} c/kWh) — Suomen sähköntuotannon rakenne tekee Hormuz-kytköksestä heikon; seuraamme korrelaatiota, emme väitä sitä",
+  "hilkka.elec": "Pörssisähkö juuri nyt: {now} c/kWh (30 pv keskiarvo {avg} c/kWh) — Suomen sähköntuotannon rakenne tekee jännitekytköksestä heikon; seuraamme korrelaatiota, emme väitä sitä",
   "hilkka.brent": "Brent-öljy on {pct} % suhteessa kriisiä edeltävään helmikuun keskiarvoon",
   "hilkka.persona": "Kerttu Korhonen ajaa bensa-autolla ({liters} l/100 km, {km} km/kk). Pumppuhinnat: Tilastokeskuksen kuukausikeskiarvot, viimeisin {month}.",
   "hilkka.lag": "Nopeat indikaattorit reagoivat minuuteissa; kansalliset tilastot laahaavat kuukausia — ja niihin vaikuttaa moni muukin asia.",
