@@ -15,7 +15,7 @@ async function boot() {
   await initI18n();
   const state = await getState();
 
-  initMap(document.getElementById('map')!, state.vessels, state.flights?.aircraft ?? []);
+  initMap(document.getElementById('map')!, state.modules.hormuz.vessels, state.modules.hormuz.flights?.aircraft ?? []);
   await status.init(state);
   layers.init(state);
   await markets.init(state);

@@ -4,7 +4,7 @@
 // at a glance. Hover any line for its real value and unit; click a legend
 // item to hide/show a series; dashed markers are the same hand-curated
 // events used on the Brent chart. A day-range selector controls the window.
-import type { AppState, HormuzEvent } from '../types';
+import type { AppState, DomainEvent } from '../types';
 import { t, getLang, fmtNum } from '../i18n';
 import { getSeries } from '../api';
 import { makeUnifiedTimeline, type UnifiedTimelineRow } from '../charts';
@@ -20,11 +20,11 @@ const METRICS: { metric: string; labelKey: string; color: string; scale?: (v: nu
 ];
 
 let chart: ReturnType<typeof makeUnifiedTimeline> | null = null;
-let events: HormuzEvent[] = [];
+let events: DomainEvent[] = [];
 let days = 7;
 
 export async function init(state: AppState): Promise<void> {
-  events = state.events;
+  events = state.modules.hormuz.events;
 
   for (const btn of document.querySelectorAll<HTMLButtonElement>('#range-toggle .range-btn')) {
     btn.addEventListener('click', () => {

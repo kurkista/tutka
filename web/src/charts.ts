@@ -6,7 +6,7 @@ import { LineChart, BarChart, GaugeChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, MarkLineComponent, LegendComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { t, fmtDate, fmtTime, fmtNum } from './i18n';
-import type { SeriesData, HormuzEvent } from './types';
+import type { SeriesData, DomainEvent } from './types';
 
 echarts.use([
   LineChart, BarChart, GaugeChart,
@@ -87,7 +87,7 @@ export function makeSparkline(el: HTMLElement, data: SeriesData, baseline: numbe
   return chart;
 }
 
-export function makeBrentChart(el: HTMLElement, daily: SeriesData, events: HormuzEvent[], lang: string) {
+export function makeBrentChart(el: HTMLElement, daily: SeriesData, events: DomainEvent[], lang: string) {
   const chart = echarts.init(el);
   chart.setOption({
     grid: { left: 42, right: 10, top: 14, bottom: 22 },
@@ -153,7 +153,7 @@ export interface UnifiedTimelineRow {
  * restored in the tooltip on hover. A flat (constant) series maps to a flat
  * midline rather than dividing by zero. Legend items toggle series on/off.
  */
-export function makeUnifiedTimeline(el: HTMLElement, rows: UnifiedTimelineRow[], events: HormuzEvent[], lang: string) {
+export function makeUnifiedTimeline(el: HTMLElement, rows: UnifiedTimelineRow[], events: DomainEvent[], lang: string) {
   const chart = echarts.init(el);
   const fmtByName = new Map(rows.map((r) => [r.label, r.fmt]));
 

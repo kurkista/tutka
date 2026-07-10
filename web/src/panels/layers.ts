@@ -29,11 +29,12 @@ let headlinesCount = 0;
 
 export function init(s: AppState): void {
   state = s;
-  transitsToday = { ...s.transitsToday };
-  for (const v of s.vessels) vessels.set(v.mmsi, true);
-  flightsCount = s.flights?.aircraft?.length ?? 0;
-  flightsTs = s.flights?.ts ?? 0;
-  headlinesCount = s.headlines.length;
+  const hormuz = s.modules.hormuz;
+  transitsToday = { ...hormuz.transitsToday };
+  for (const v of hormuz.vessels) vessels.set(v.mmsi, true);
+  flightsCount = hormuz.flights?.aircraft?.length ?? 0;
+  flightsTs = hormuz.flights?.ts ?? 0;
+  headlinesCount = hormuz.headlines.length;
   render();
   setInterval(render, 60_000);
 }
@@ -76,7 +77,7 @@ function ageLabel(ts: number | null | undefined): string {
 }
 
 function shipsRow(): LayerRow {
-  const ais = state.ais;
+  const ais = state.modules.hormuz.ais;
   let status: DotStatus;
   let detail: string;
   if (ais.disabled) {
@@ -88,7 +89,7 @@ function shipsRow(): LayerRow {
   } else {
     status = 'warning'; detail = t('ais.reconnecting');
   }
-  const u = state.uniqueLargeToday;
+  const u = state.modules.hormuz.uniqueLargeToday;
   const nums = t('layers.shipsNums', {
     n: vessels.size,
     in: transitsToday.in,

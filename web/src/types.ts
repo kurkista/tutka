@@ -10,18 +10,37 @@ export interface Vessel {
   seen: number;
 }
 
-export interface HpiComponent {
+export interface Aircraft {
+  icao: string;
+  cs: string | null;
+  lon: number;
+  lat: number;
+  alt: number | null;
+  trk: number | null;
+}
+
+export interface IndexComponent {
   score: number;
   raw: Record<string, unknown>;
   ts: number;
 }
 
+/** Hormuz's index snapshot, as mapped back by http.js's latestHpiSnapshot() wrapper. */
 export interface HpiSnapshot {
   ts: number;
   hpi: number;
   band: string;
-  components: Record<string, HpiComponent>;
-  used: string[];
+  components: Record<string, IndexComponent>;
+  used?: string[];
+  version: string;
+}
+
+/** A generic index_snapshots row (e.g. infoenv) — field is `value`, not `hpi`. */
+export interface IndexSnapshot {
+  ts: number;
+  value: number;
+  band: string;
+  components: Record<string, IndexComponent>;
   version: string;
 }
 
@@ -37,7 +56,7 @@ export interface Headline {
   source: string | null;
 }
 
-export interface HormuzEvent {
+export interface DomainEvent {
   ts: string;
   type: string;
   en: string;
@@ -45,18 +64,39 @@ export interface HormuzEvent {
   url: string;
 }
 
-export interface AppState {
-  ts: number;
+export interface AisStatus {
+  disabled: boolean;
+  connected: boolean;
+  lastMsgTs: number | null;
+  msgCount: number;
+  streaming: boolean;
+}
+
+export interface HormuzModule {
   hpi: HpiSnapshot | null;
-  metrics: Record<string, MetricPoint>;
   vessels: Vessel[];
   transitsToday: { in: number; out: number };
   uniqueLargeToday: { tankers: number; cargo: number };
   headlines: Headline[];
-  events: HormuzEvent[];
-  ais: { disabled: boolean; connected: boolean; lastMsgTs: number | null; msgCount: number; streaming: boolean };
+  events: DomainEvent[];
+  flights: { ts: number; aircraft: Aircraft[] };
+  ais: AisStatus;
+}
+
+export interface InfoenvModule {
+  index: IndexSnapshot | null;
+  headlines: Headline[];
+  events: DomainEvent[];
+}
+
+export interface AppState {
+  ts: number;
   jobs: Record<string, { lastSuccess: number | null; lastError: number | null; lastErrorMsg: string | null }>;
-  flights: { ts: number; aircraft: { icao: string; cs: string | null; lon: number; lat: number; alt: number | null; trk: number | null }[] };
+  metrics: Record<string, MetricPoint>;
+  modules: {
+    hormuz: HormuzModule;
+    infoenv: InfoenvModule;
+  };
 }
 
 export type SeriesData = [number, number][];

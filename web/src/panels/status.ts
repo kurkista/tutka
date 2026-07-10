@@ -13,13 +13,14 @@ const COMPONENT_KEYS = ['T', 'N', 'P', 'O'] as const;
 let gauge: echarts.ECharts;
 
 export async function init(s: AppState): Promise<void> {
+  const hormuz = s.modules.hormuz;
   gauge = makeGauge(document.getElementById('hpi-gauge')!);
-  renderHpi(s.hpi);
+  renderHpi(hormuz.hpi);
 
-  if (s.ais.disabled) {
+  if (hormuz.ais.disabled) {
     const ticker = document.getElementById('ticker')!;
     ticker.innerHTML = `<li class="muted">${t('ais.disabled')}</li>`;
-  } else if (s.ais.connected && !s.ais.streaming) {
+  } else if (hormuz.ais.connected && !hormuz.ais.streaming) {
     // subscribed but nothing broadcasting — regional receiver blackout
     const ticker = document.getElementById('ticker')!;
     ticker.innerHTML = `<li class="muted">${t('ais.noCoverage')}</li>`;

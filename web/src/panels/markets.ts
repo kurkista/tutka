@@ -14,7 +14,8 @@ export async function init(state: AppState): Promise<void> {
   daily = await getSeries('brent_usd', 60);
   lastDailyClose = daily.length >= 2 ? daily[daily.length - 2][1] : null;
 
-  brentChart = makeBrentChart(document.getElementById('brent-chart')!, withIntraday(state), state.events, getLang());
+  const hormuz = state.modules.hormuz;
+  brentChart = makeBrentChart(document.getElementById('brent-chart')!, withIntraday(state), hormuz.events, getLang());
   bindResize(brentChart);
 
   renderBigNum(state.metrics.brent_intraday?.value ?? daily.at(-1)?.[1] ?? null);
@@ -23,10 +24,10 @@ export async function init(state: AppState): Promise<void> {
 
   const list = document.getElementById('headlines')!;
   list.innerHTML = '';
-  if (state.headlines.length === 0) {
+  if (hormuz.headlines.length === 0) {
     list.innerHTML = `<li class="muted">${t('news.empty')}</li>`;
   } else {
-    for (const h of state.headlines) list.appendChild(headlineLi(h));
+    for (const h of hormuz.headlines) list.appendChild(headlineLi(h));
   }
 }
 
