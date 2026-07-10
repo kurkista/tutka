@@ -73,7 +73,17 @@
     </aside>
   </main>
 
-  <button id="hilkka-tab" class="hilkka-tab" aria-expanded="false">🇫🇮 <span data-i18n="hilkka.tab">Kerttu &amp; Suomi</span></button>
+  <div id="bottom-tabs">
+    <button id="timeline-tab" class="bottom-tab" aria-expanded="false">📈 <span data-i18n="timeline.tab">Timeline</span></button>
+    <button id="hilkka-tab" class="bottom-tab" aria-expanded="false">🇫🇮 <span data-i18n="hilkka.tab">Kerttu &amp; Suomi</span></button>
+  </div>
+
+  <div id="timeline-drawer" class="drawer" hidden>
+    <h2 data-i18n="timeline.title">Timeline</h2>
+    <p class="fineprint" data-i18n="timeline.explainer">Every series we hold real history for, stacked on a shared time axis so you can eyeball what moves together. Real units per row — hover for exact values. Dashed lines mark the same hand-curated events as the Brent chart. Ships/flights history only started accumulating on launch day, so those rows are short for now.</p>
+    <div id="timeline-chart"></div>
+  </div>
+
   <div id="hilkka-drawer" class="drawer" hidden>
     <div class="drawer-grid">
       <section>

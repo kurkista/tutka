@@ -2,6 +2,7 @@
 // average Finnish household, plus national fast proxies. All arithmetic is
 // server-side (/api/hilkka); this file only formats and translates.
 import { t, fmtNum, fmtDate } from '../i18n';
+import { closeDrawer as closeTimelineDrawer } from './timeline';
 
 interface HilkkaData {
   persona: { tankLiters: number; kmPerMonth: number; litersPer100km: number; kwhPerMonth: number; heatoilLiters: number; preCrisisMonth: string };
@@ -28,6 +29,7 @@ export async function init(): Promise<void> {
   const drawer = document.getElementById('hilkka-drawer')!;
   tab.addEventListener('click', () => {
     const open = drawer.hasAttribute('hidden');
+    closeTimelineDrawer();
     drawer.toggleAttribute('hidden', !open);
     tab.setAttribute('aria-expanded', String(open));
   });
@@ -41,6 +43,7 @@ export async function init(): Promise<void> {
 function openDrawer(): void {
   const tab = document.getElementById('hilkka-tab')!;
   const drawer = document.getElementById('hilkka-drawer')!;
+  closeTimelineDrawer();
   drawer.removeAttribute('hidden');
   tab.setAttribute('aria-expanded', 'true');
   drawer.scrollIntoView({ behavior: 'smooth', block: 'end' });

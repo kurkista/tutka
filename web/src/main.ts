@@ -8,6 +8,7 @@ import * as markets from './panels/markets';
 import * as hilkka from './panels/hilkka';
 import * as layers from './panels/layers';
 import * as welcome from './panels/welcome';
+import * as timeline from './panels/timeline';
 import { initMethodology } from './panels/methodology';
 
 async function boot() {
@@ -19,6 +20,7 @@ async function boot() {
   layers.init(state);
   await markets.init(state);
   await hilkka.init();
+  timeline.init(state);
   initMethodology();
   welcome.init();
 

@@ -1,8 +1,11 @@
 // @ts-check
 // opensky.js — live aircraft over the wider Gulf from the OpenSky Network
-// (free registered account, OAuth2 client credentials). Flights are ephemeral
-// context, not index input: kept in memory only, never in SQLite.
+// (free registered account, OAuth2 client credentials). Raw aircraft
+// positions are ephemeral context, not index input: kept in memory only,
+// never in SQLite. The aircraft *count* is cheap enough to keep as a scalar
+// history series (flights_count) for the consolidated timeline view.
 import { OPENSKY } from '../config.js';
+import { putSeries } from '../db.js';
 import { bus } from '../bus.js';
 
 let token = '';
@@ -72,4 +75,5 @@ export async function pollOpenSky() {
       trk: typeof s[10] === 'number' ? Math.round(s[10]) : null,
     }));
   bus.emit('flights', { ts: latest.ts, aircraft: latest.aircraft });
+  putSeries('flights_count', latest.ts, latest.aircraft.length);
 }

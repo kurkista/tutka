@@ -227,6 +227,7 @@ export const PUBLIC_METRICS = [
   'pw_7dma',
   'vessels_in_strait',
   'unique_large_24h',
+  'flights_count',
   'hpi',
   'elec_spot',
   'pump_e95',

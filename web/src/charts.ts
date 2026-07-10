@@ -134,3 +134,78 @@ export function updateBrentChart(chart: echarts.ECharts, daily: SeriesData) {
 export function bindResize(...charts: echarts.ECharts[]) {
   window.addEventListener('resize', () => charts.forEach((c) => c.resize()), { passive: true });
 }
+
+export interface TimelineRow {
+  label: string;
+  data: SeriesData;
+  color: string;
+  valueFormatter?: (v: number) => string;
+}
+
+/**
+ * Stacked mini-charts sharing one time axis (linked axisPointer + tooltip),
+ * each keeping its own real-unit y-axis — deliberately not normalized onto a
+ * shared scale, so the numbers stay legible without a hover.
+ */
+export function makeTimeline(el: HTMLElement, rows: TimelineRow[], events: HormuzEvent[], lang: string) {
+  const rowH = 84;
+  const gap = 14;
+  const top0 = 6;
+  const bottomAxisH = 20;
+  el.style.height = `${top0 + rows.length * (rowH + gap) + bottomAxisH}px`;
+
+  const chart = echarts.init(el);
+  const isLast = (i: number) => i === rows.length - 1;
+
+  chart.setOption({
+    axisPointer: { link: [{ xAxisIndex: 'all' }] },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#1a1a19', borderColor: GRID, textStyle: { color: INK2, fontSize: 11 },
+      axisPointer: { type: 'cross', label: { backgroundColor: '#383835' } },
+    },
+    grid: rows.map((_, i) => ({
+      left: 100, right: 16, top: top0 + i * (rowH + gap), height: rowH,
+    })),
+    xAxis: rows.map((_, i) => ({
+      type: 'time', gridIndex: i, ...axisBase,
+      splitLine: { show: false },
+      axisLabel: { show: isLast(i), color: MUTED, fontSize: 10 },
+      axisLine: { show: isLast(i), lineStyle: { color: GRID } },
+    })),
+    yAxis: rows.map((r, i) => ({
+      type: 'value', scale: true, gridIndex: i,
+      ...axisBase,
+      splitNumber: 2,
+      name: r.label,
+      nameLocation: 'middle',
+      nameGap: 70,
+      nameTextStyle: { color: INK2, fontSize: 11, align: 'left' },
+    })),
+    series: rows.map((r, i) => ({
+      type: 'line',
+      data: r.data,
+      xAxisIndex: i, yAxisIndex: i,
+      showSymbol: false,
+      lineStyle: { color: r.color, width: 1.6 },
+      itemStyle: { color: r.color },
+      areaStyle: { color: r.color, opacity: 0.08 },
+      ...(i === 0 ? {
+        markLine: {
+          symbol: 'none',
+          lineStyle: { color: MUTED, type: 'dashed', width: 1, opacity: 0.6 },
+          label: { show: false },
+          emphasis: {
+            label: {
+              show: true, position: 'insideEndTop', color: INK2, fontSize: 10,
+              formatter: (p: any) => p.name, width: 140, overflow: 'break',
+              backgroundColor: '#1a1a19', padding: 4,
+            },
+          },
+          data: events.map((e) => ({ xAxis: Date.parse(e.ts), name: lang === 'fi' ? e.fi : e.en })),
+        },
+      } : {}),
+    })),
+  } as any);
+  return chart;
+}

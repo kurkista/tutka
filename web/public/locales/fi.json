@@ -83,5 +83,15 @@
   "welcome.bestEffort": "Live-AIS (maa-asemat — tällä hetkellä suurelta osin pimeänä Persianlahdella, kriisin keskellä), lennot (OpenSky), uutismäärä (GDELT, rajoitettu), päivänsisäiset kurssit (epävirallinen). Aukot näytetään, ei piiloteta.",
   "welcome.footer": "Yhden hengen kansalaisprojekti ilmaisella julkisella datalla. Ei navigointi- eikä sijoitusneuvontaa.",
   "welcome.dontShow": "Älä näytä uudelleen",
-  "welcome.close": "Sulje"
+  "welcome.close": "Sulje",
+  "timeline.tab": "Aikajana",
+  "timeline.title": "Aikajana",
+  "timeline.explainer": "Jokainen sarja, josta meillä on oikeaa historiaa, pinottuna yhteiselle aika-akselille — näin näet mikä liikkuu yhdessä. Jokaisella rivillä oikea yksikkö, tarkat arvot viemällä hiiren päälle. Katkoviivat merkitsevät samat käsin kootut tapahtumat kuin Brent-kaaviossa. Alusten ja lentojen historia alkoi kertyä vasta julkaisupäivänä, joten niiden rivit ovat toistaiseksi lyhyitä.",
+  "timeline.hpi": "Läpikuljettavuusindeksi",
+  "timeline.brent": "Brent (USD/tynnyri)",
+  "timeline.transits": "Läpikulkuja/pv",
+  "timeline.news": "Uutisartikkeleita/24h",
+  "timeline.odds": "Markkinaodotus (%)",
+  "timeline.ships": "Aluksia salmessa",
+  "timeline.flights": "Lentoja alueella"
 }

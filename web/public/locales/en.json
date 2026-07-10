@@ -83,5 +83,15 @@
   "welcome.bestEffort": "Live ship AIS (terrestrial receivers — currently largely dark in the Gulf, mid-crisis), flights (OpenSky), news volume (GDELT, rate-limited), intraday quotes (unofficial). Gaps are shown, never hidden.",
   "welcome.footer": "A one-person civic hobby project on free public data. Not navigation or trading advice.",
   "welcome.dontShow": "Don't show again",
-  "welcome.close": "Close"
+  "welcome.close": "Close",
+  "timeline.tab": "Timeline",
+  "timeline.title": "Timeline",
+  "timeline.explainer": "Every series we hold real history for, stacked on a shared time axis so you can eyeball what moves together. Real units per row — hover for exact values. Dashed lines mark the same hand-curated events as the Brent chart. Ships/flights history only started accumulating on launch day, so those rows are short for now.",
+  "timeline.hpi": "Passability index",
+  "timeline.brent": "Brent (USD/bbl)",
+  "timeline.transits": "Transits/day",
+  "timeline.news": "News articles/24h",
+  "timeline.odds": "Market odds (%)",
+  "timeline.ships": "Ships in strait",
+  "timeline.flights": "Flights over region"
 }
