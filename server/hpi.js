@@ -3,11 +3,15 @@
 // (unit-tested in server/test/hpi.test.js); gatherAndCompute() feeds it from
 // the database and persists/broadcasts snapshots. METHODOLOGY.md documents
 // every choice made here — keep the two in sync.
+// The weighted-average/staleness-renormalization/band-hysteresis machinery
+// itself lives in indices/engine.js, shared with every other domain's index
+// (e.g. indices/infoenv.js) — only the T/N/P/O component scoring is Hormuz-specific.
 import { HPI, POLYMARKET } from './config.js';
-import { latestSeries, latestHpiSnapshot, putHpiSnapshot, putSeries } from './db.js';
+import { latestSeries, latestIndexSnapshot, putIndexSnapshot, putSeries } from './db.js';
 import { bus } from './bus.js';
+import { clamp, computeIndex } from './indices/engine.js';
 
-const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+const INDEX_NAME = 'hormuz';
 
 /**
  * @param {{
@@ -59,26 +63,21 @@ export function computeHPI(inputs, now, prevBand = null) {
     };
   }
 
-  const used = Object.keys(components);
-  if (used.length === 0) return null; // nothing fresh — no index rather than a lie
-
-  // Weighted average over available components (weights renormalized so a
-  // dropped component doesn't silently pull the index toward zero).
-  let weightSum = 0;
-  let acc = 0;
-  for (const key of used) {
-    acc += HPI.weights[key] * components[key].score;
-    weightSum += HPI.weights[key];
-  }
-  const hpi = Math.round((acc / weightSum) * 10) / 10;
+  const result = computeIndex({
+    components,
+    config: { weights: HPI.weights, bands: HPI.bands, hysteresisPoints: HPI.hysteresisPoints, version: HPI.version },
+    now,
+    prevBand,
+  });
+  if (!result) return null; // nothing fresh — no index rather than a lie
 
   return {
-    ts: now,
-    hpi,
-    band: bandWithHysteresis(hpi, prevBand),
-    components,
-    used,
-    version: HPI.version,
+    ts: result.ts,
+    hpi: result.value,
+    band: result.band,
+    components: result.components,
+    used: result.used,
+    version: result.version,
   };
 }
 
@@ -87,31 +86,11 @@ function fresh(input, key, now) {
   return !!input && now - input.ts <= HPI.stalenessMs[key];
 }
 
-/**
- * Plain band lookup, then hysteresis: leaving the previous band requires
- * clearing the boundary by HPI.hysteresisPoints, one band step at a time.
- */
-function bandWithHysteresis(hpi, prevBand) {
-  const idxOf = (name) => HPI.bands.findIndex((b) => b.name === name);
-  const plain = HPI.bands.find((b) => hpi >= b.min) ?? HPI.bands[HPI.bands.length - 1];
-  if (!prevBand || idxOf(prevBand) === -1) return plain.name;
-
-  let idx = idxOf(prevBand);
-  for (let guard = 0; guard < HPI.bands.length; guard++) {
-    // improving: step to the next-higher band only if we clear its floor + margin
-    if (idx > 0 && hpi >= HPI.bands[idx - 1].min + HPI.hysteresisPoints) { idx--; continue; }
-    // worsening: step down only if we fall below our floor − margin
-    if (idx < HPI.bands.length - 1 && hpi < HPI.bands[idx].min - HPI.hysteresisPoints) { idx++; continue; }
-    break;
-  }
-  return HPI.bands[idx].name;
-}
-
 let lastPersistTs = 0;
 
 /** Reads latest inputs from the DB, computes, persists + broadcasts. */
 export function gatherAndCompute(now = Date.now()) {
-  const prev = latestHpiSnapshot();
+  const prev = latestIndexSnapshot(INDEX_NAME);
   const t = latestSeries('pw_7dma');
   const vol = latestSeries('gdelt_vol24h');
   const base = latestSeries('gdelt_base_daily');
@@ -129,7 +108,10 @@ export function gatherAndCompute(now = Date.now()) {
 
   const bandChanged = prev && prev.band !== snapshot.band;
   if (!prev || bandChanged || now - lastPersistTs >= HPI.snapshotMs) {
-    putHpiSnapshot(snapshot);
+    putIndexSnapshot(INDEX_NAME, {
+      ts: snapshot.ts, value: snapshot.hpi, band: snapshot.band,
+      components: snapshot.components, version: snapshot.version,
+    });
     putSeries('hpi', snapshot.ts, snapshot.hpi);
     lastPersistTs = now;
   }

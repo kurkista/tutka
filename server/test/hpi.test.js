@@ -40,15 +40,8 @@ test('no fresh components → null, never a fabricated index', () => {
   assert.equal(s, null);
 });
 
-test('band hysteresis: small wobble across a boundary keeps the previous band', () => {
-  // 30 is the SEVERELY_DISRUPTED floor; 31 from EFFECTIVELY_CLOSED must not flip
-  const mk = (tValue) => computeHPI(
-    { T: { value: tValue, ts: now } }, now, 'EFFECTIVELY_CLOSED');
-  // T-only: hpi = T score. 29 → stays closed; 31 → still closed (needs ≥32); 33 → flips
-  assert.equal(mk(0.29 * HPI.baselineTransitsPerDay).band, 'EFFECTIVELY_CLOSED');
-  assert.equal(mk(0.31 * HPI.baselineTransitsPerDay).band, 'EFFECTIVELY_CLOSED');
-  assert.equal(mk(0.33 * HPI.baselineTransitsPerDay).band, 'SEVERELY_DISRUPTED');
-});
+// Band hysteresis itself (generic weighted-renormalization + banding logic)
+// is tested in test/index-engine.test.js against indices/engine.js directly.
 
 test('closed-direction market inverts the probability', () => {
   const s = computeHPI(

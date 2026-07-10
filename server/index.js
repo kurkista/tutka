@@ -3,7 +3,7 @@
 try { process.loadEnvFile(); } catch { /* no .env — fine in production */ }
 
 import {
-  DB_PATH, VESSELS, HPI, POLYMARKET, GDELT, BRENT, PORTWATCH,
+  DB_PATH, VESSELS, HPI, INFOENV, POLYMARKET, GDELT, BRENT, PORTWATCH,
   ELECTRICITY, STATFIN, STOCKS, FX, OPENSKY,
 } from './config.js';
 import { openDb, putTransit, prune, transitsSince, upsertVesselsDaily, putSeries } from './db.js';
@@ -13,6 +13,7 @@ import { startHttp } from './http.js';
 import { register } from './scheduler.js';
 import { bus } from './bus.js';
 import { gatherAndCompute } from './hpi.js';
+import { gatherAndComputeInfoEnv } from './indices/infoenv.js';
 import { pollBrentHistory, pollBrentQuote } from './pollers/brent.js';
 import { pollPolymarket } from './pollers/polymarket.js';
 import { pollGdelt } from './pollers/gdelt.js';
@@ -85,7 +86,8 @@ function countTransitsBetween(startTs, endTs, dir) {
 register('brent_history', pollBrentHistory, BRENT.historyPollMs);
 register('brent_quote', pollBrentQuote, BRENT.quotePollMs);
 register('polymarket', pollPolymarket, POLYMARKET.pollMs);
-register('gdelt', pollGdelt, GDELT.pollMs);
+register('gdelt_hormuz', () => pollGdelt(GDELT.modules.hormuz), GDELT.modules.hormuz.pollMs);
+register('gdelt_infoenv', () => pollGdelt(GDELT.modules.infoenv), GDELT.modules.infoenv.pollMs);
 register('portwatch', pollPortwatch, PORTWATCH.pollMs);
 register('electricity', pollElectricity, ELECTRICITY.pollMs);
 register('pump', pollPump, STATFIN.pollMs);
@@ -98,6 +100,7 @@ if (OPENSKY.clientId && OPENSKY.clientSecret) {
   console.warn('[main] OpenSky credentials not set — flight layer disabled.');
 }
 register('hpi', async () => { gatherAndCompute(); }, HPI.recomputeMs);
+register('infoenv_index', async () => { gatherAndComputeInfoEnv(); }, INFOENV.recomputeMs);
 register('prune', async () => { prune(); }, 24 * 3600_000);
 
 // --- shutdown --------------------------------------------------------------------

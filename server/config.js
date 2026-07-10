@@ -93,6 +93,39 @@ export const HPI = {
 };
 
 // ---------------------------------------------------------------------------
+// Information Environment Index — domain 3 (disinformation/narrative
+// pressure around Finland/Baltic keywords). Second domain built after Hormuz;
+// see hpi.js/indices/infoenv.js and METHODOLOGY.md for the full rationale.
+// Deliberately just two honest signals, not forced into HPI's four-part shape.
+// ---------------------------------------------------------------------------
+export const INFOENV = {
+  version: 'infoenv-v0',
+  weights: { V: 0.6, T: 0.4 },
+  // Same direction convention as HPI: higher score = calmer. Band names are
+  // domain-appropriate, not reused from HPI's OPEN/RESTRICTED/... names.
+  bands: [
+    { min: 70, name: 'CALM' },
+    { min: 45, name: 'ELEVATED' },
+    { min: 20, name: 'ACTIVE' },
+    { min: 0, name: 'SATURATED' },
+  ],
+  hysteresisPoints: 2,
+  // News volume: 24h GDELT article volume vs a calm-2025 median baseline,
+  // log10-scaled exactly like HPI's N component (10× the median → score 0).
+  newsLog10Span: 1,
+  // GDELT average tone is roughly 0 (neutral) down to about -10 (extreme
+  // negative coverage) in ordinary use; -8 is a genuinely alarmed 24h average.
+  toneCalm: 0,
+  toneExtreme: -8,
+  stalenessMs: {
+    V: 3 * 3600_000,
+    T: 24 * 3600_000,
+  },
+  recomputeMs: 5 * 60_000,
+  snapshotMs: 15 * 60_000,
+};
+
+// ---------------------------------------------------------------------------
 // Pollers
 // ---------------------------------------------------------------------------
 export const POLYMARKET = {
@@ -109,18 +142,35 @@ export const POLYMARKET = {
 
 export const GDELT = {
   docUrl: 'https://api.gdeltproject.org/api/v2/doc/doc',
-  query: '"strait of hormuz"',
   // GDELT asks for ≥5 s between requests; we space consecutive calls by this.
   // 30-min cadence + in-query retries: fly's shared IPv4 egress NAT means
   // GDELT's per-IP quota is contested, so most requests 429 — we need chances.
   spacingMs: 10_000,
-  pollMs: 30 * 60_000,
   headlineCount: 20,
-  // Calm-period window for the N baseline: calendar year 2025, the last
-  // pre-crisis year (the June 2025 scare is absorbed by using the median).
-  calmStart: '20250101000000',
-  calmEnd: '20251231235959',
   userAgent: 'salmi-monitor/0.1 (+https://github.com/kurkista/salmi)',
+  // One config block per monitored domain — same GDELT mechanism, different
+  // query/series names/calm baseline. Add a new block here for a future domain
+  // rather than duplicating pollers/gdelt.js.
+  modules: {
+    hormuz: {
+      module: 'hormuz',
+      query: '"strait of hormuz"',
+      seriesPrefix: 'gdelt_',
+      pollMs: 30 * 60_000,
+      // Calm-period window for the N baseline: calendar year 2025, the last
+      // pre-crisis year (the June 2025 scare is absorbed by using the median).
+      calmStart: '20250101000000',
+      calmEnd: '20251231235959',
+    },
+    infoenv: {
+      module: 'infoenv',
+      query: '(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (disinformation OR propaganda OR "influence operation" OR "information operation")',
+      seriesPrefix: 'gdelt_infoenv_',
+      pollMs: 30 * 60_000,
+      calmStart: '20250101000000',
+      calmEnd: '20251231235959',
+    },
+  },
 };
 
 export const BRENT = {
@@ -221,6 +271,10 @@ export const PUBLIC_METRICS = [
   'gdelt_vol24h',
   'gdelt_median30d',
   'gdelt_tone',
+  'gdelt_infoenv_vol24h',
+  'gdelt_infoenv_median30d',
+  'gdelt_infoenv_tone',
+  'infoenv_index',
   'pw_total',
   'pw_tanker',
   'pw_cargo',

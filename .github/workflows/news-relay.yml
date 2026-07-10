@@ -2,7 +2,9 @@
 # level ("fetch failed", not just 429s), so the direct in-app poller rarely
 # succeeds there. GitHub Actions runner IPs rotate widely and generally aren't
 # blocked, so this workflow fetches the same GDELT queries from the runner and
-# relays the raw JSON to the app's ingest endpoint.
+# relays the raw JSON to the app's ingest endpoint — one job per monitored
+# domain (matrix), each runner getting its own IP, which incidentally helps
+# rather than hurts GDELT's per-IP rate limiting.
 name: news-relay
 
 on:
@@ -17,12 +19,22 @@ on:
 
 env:
   SALMI_URL: https://salmi.fly.dev
-  GDELT_QUERY: '"strait of hormuz"'
   GDELT_UA: 'salmi-monitor/0.1 (+https://github.com/kurkista/salmi)'
 
 jobs:
   relay:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - module: hormuz
+            query: '"strait of hormuz"'
+          - module: infoenv
+            query: '(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (disinformation OR propaganda OR "influence operation" OR "information operation")'
+    env:
+      GDELT_MODULE: ${{ matrix.module }}
+      GDELT_QUERY: ${{ matrix.query }}
     steps:
       - name: Fetch GDELT volume (30d) + tone (2d) + headlines, build payload
         id: build
@@ -58,7 +70,7 @@ jobs:
           fi
 
           if [ "$got_volume" = 0 ] && [ "$got_tone" = 0 ] && [ "$got_articles" = 0 ] && [ "$got_calm" = 0 ]; then
-            echo "::error::all GDELT queries failed — nothing to relay this run"
+            echo "::error::[$GDELT_MODULE] all GDELT queries failed — nothing to relay this run"
             exit 1
           fi
 
@@ -76,12 +88,12 @@ jobs:
         run: |
           set -euo pipefail
           http_code=$(curl -sS -o response.json -w '%{http_code}' \
-            -X POST "${SALMI_URL}/api/ingest/gdelt" \
+            -X POST "${SALMI_URL}/api/ingest/gdelt/${GDELT_MODULE}" \
             -H "Authorization: Bearer ${{ secrets.INGEST_TOKEN }}" \
             -H 'Content-Type: application/json' \
             --data @payload.json)
           echo "response: $(cat response.json)"
           if [ "$http_code" -ge 300 ]; then
-            echo "::error::ingest endpoint returned HTTP $http_code"
+            echo "::error::[$GDELT_MODULE] ingest endpoint returned HTTP $http_code"
             exit 1
           fi

@@ -5,11 +5,12 @@ import express from 'express';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PUBLIC_METRICS, SSE } from './config.js';
+import { PUBLIC_METRICS, SSE, GDELT } from './config.js';
 import {
-  latestSeries, seriesSince, latestHpiSnapshot, recentHeadlines,
+  latestSeries, seriesSince, latestIndexSnapshot, recentHeadlines,
   vesselsDailySince, transitsSince,
 } from './db.js';
+
 import { jobStatus } from './scheduler.js';
 import { aisStatus } from './ais.js';
 import { bus } from './bus.js';
@@ -17,9 +18,19 @@ import { computeHilkka } from './hilkka.js';
 import { flightsSnapshot } from './pollers/opensky.js';
 import { storeGdeltPayload } from './pollers/gdelt.js';
 import { gatherAndCompute } from './hpi.js';
+import { gatherAndComputeInfoEnv } from './indices/infoenv.js';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+/** @type {{hormuz: any[], infoenv: any[]}} */
 const events = JSON.parse(readFileSync(path.join(root, 'data/events.json'), 'utf8'));
+
+/** hormuz's index_snapshots row (value/band/components/version) mapped back
+ * to the historical {hpi, band, ...} shape existing consumers expect. */
+function latestHpiSnapshot() {
+  const row = latestIndexSnapshot('hormuz');
+  if (!row) return undefined;
+  return { ts: row.ts, hpi: row.value, band: row.band, components: row.components, used: row.used, version: row.version };
+}
 
 /** @param {{store: import('./vessels.js').VesselStore}} deps */
 export function startHttp({ store }) {
@@ -44,7 +55,7 @@ export function startHttp({ store }) {
     for (const res of clients) res.write(': ping\n\n');
   }, SSE.pingMs).unref?.();
 
-  for (const event of ['vessels', 'transit', 'hpi', 'metric', 'headline', 'flights']) {
+  for (const event of ['vessels', 'transit', 'hpi', 'infoenv_index', 'metric', 'headline', 'flights']) {
     bus.on(event, (data) => broadcast(event, data));
   }
 
@@ -80,16 +91,25 @@ export function startHttp({ store }) {
     }
     res.json({
       ts: Date.now(),
-      hpi: latestHpiSnapshot() ?? null,
-      metrics,
-      vessels: store.snapshot(),
-      transitsToday: store.transitsToday,
-      uniqueLargeToday: store.uniqueLargeToday(),
-      headlines: recentHeadlines(20),
-      events,
-      flights: flightsSnapshot(),
-      ais: aisStatus(),
       jobs: jobStatus(),
+      metrics,
+      modules: {
+        hormuz: {
+          hpi: latestHpiSnapshot() ?? null,
+          vessels: store.snapshot(),
+          transitsToday: store.transitsToday,
+          uniqueLargeToday: store.uniqueLargeToday(),
+          headlines: recentHeadlines(20, 'hormuz'),
+          events: events.hormuz,
+          flights: flightsSnapshot(),
+          ais: aisStatus(),
+        },
+        infoenv: {
+          index: latestIndexSnapshot('infoenv') ?? null,
+          headlines: recentHeadlines(20, 'infoenv'),
+          events: events.infoenv,
+        },
+      },
     });
   });
 
@@ -113,25 +133,33 @@ export function startHttp({ store }) {
   });
 
   app.get('/api/headlines', (req, res) => {
-    res.json(recentHeadlines(Math.min(Number(req.query.limit) || 50, 200)));
+    const module = typeof req.query.module === 'string' ? req.query.module : undefined;
+    res.json(recentHeadlines(Math.min(Number(req.query.limit) || 50, 200), module));
   });
 
-  app.get('/api/events', (req, res) => res.json(events));
+  app.get('/api/events', (req, res) => {
+    const module = typeof req.query.module === 'string' ? req.query.module : undefined;
+    res.json(module ? (events[module] ?? []) : events);
+  });
 
   app.get('/api/hilkka', (req, res) => res.json(computeHilkka()));
 
   // News relay ingest: the news-relay GitHub Action fetches GDELT from runner
-  // IPs (GDELT refuses fly's shared egress IPs) and pushes the raw JSON here.
-  app.post('/api/ingest/gdelt', express.json({ limit: '4mb' }), (req, res) => {
+  // IPs (GDELT refuses fly's shared egress IPs) and pushes the raw JSON here,
+  // one domain module at a time (see config.js's GDELT.modules).
+  app.post('/api/ingest/gdelt/:module', express.json({ limit: '4mb' }), (req, res) => {
     const token = process.env.INGEST_TOKEN;
     if (!token) return res.status(503).json({ error: 'ingest not configured' });
     if (req.headers.authorization !== `Bearer ${token}`) {
       return res.status(401).json({ error: 'unauthorized' });
     }
+    const cfg = GDELT.modules[req.params.module];
+    if (!cfg) return res.status(404).json({ error: 'unknown module' });
     try {
-      const stored = storeGdeltPayload(req.body ?? {});
-      gatherAndCompute();
-      console.log(`[ingest] gdelt relay stored: ${stored.join(', ')}`);
+      const stored = storeGdeltPayload(req.body ?? {}, Date.now(), cfg);
+      if (cfg.module === 'hormuz') gatherAndCompute();
+      if (cfg.module === 'infoenv') gatherAndComputeInfoEnv();
+      console.log(`[ingest] gdelt relay (${cfg.module}) stored: ${stored.join(', ')}`);
       res.json({ ok: true, stored });
     } catch (err) {
       res.status(400).json({ error: err instanceof Error ? err.message : String(err) });

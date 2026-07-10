@@ -49,6 +49,8 @@ export function openDb(path) {
     );
     CREATE INDEX IF NOT EXISTS idx_headlines_ts ON headlines (ts);
 
+    -- Kept for rollback safety after the index_snapshots migration below;
+    -- no longer written to (see indices/engine.js + putIndexSnapshot).
     CREATE TABLE IF NOT EXISTS hpi_snapshots (
       ts INTEGER PRIMARY KEY,
       hpi REAL NOT NULL,
@@ -56,8 +58,49 @@ export function openDb(path) {
       components TEXT NOT NULL, -- JSON: per-component score/raw/ts + used[]
       version TEXT NOT NULL
     );
+
+    -- Generic index-snapshot store, one row per (domain index, timestamp) —
+    -- replaces hpi_snapshots so a second domain's index (e.g. Information
+    -- Environment) doesn't need its own bespoke table.
+    CREATE TABLE IF NOT EXISTS index_snapshots (
+      index_name TEXT NOT NULL,
+      ts INTEGER NOT NULL,
+      value REAL NOT NULL,
+      band TEXT NOT NULL,
+      components TEXT NOT NULL,
+      version TEXT NOT NULL,
+      PRIMARY KEY (index_name, ts)
+    );
   `);
+
+  migrateHpiSnapshots(db);
+  migrateHeadlinesModuleColumn(db);
+
   return db;
+}
+
+// One-time migration: carry any existing hpi_snapshots rows into the new
+// generic index_snapshots table, tagged 'hormuz'. Idempotent — skipped once
+// index_snapshots already has rows.
+function migrateHpiSnapshots(db) {
+  const { n } = /** @type {any} */ (db.prepare('SELECT COUNT(*) AS n FROM index_snapshots').get());
+  if (n > 0) return;
+  const rows = /** @type {any[]} */ (db.prepare('SELECT * FROM hpi_snapshots').all());
+  if (rows.length === 0) return;
+  const insert = db.prepare(
+    'INSERT INTO index_snapshots (index_name, ts, value, band, components, version) VALUES (?, ?, ?, ?, ?, ?)'
+  );
+  for (const r of rows) insert.run('hormuz', r.ts, r.hpi, r.band, r.components, r.version);
+  console.log(`[db] migrated ${rows.length} hpi_snapshots row(s) into index_snapshots`);
+}
+
+// node:sqlite doesn't support "ADD COLUMN IF NOT EXISTS" — guard manually.
+// The DEFAULT literal backfills existing rows, so no separate UPDATE is needed.
+function migrateHeadlinesModuleColumn(db) {
+  const cols = /** @type {any[]} */ (db.prepare('PRAGMA table_info(headlines)').all());
+  if (cols.some((c) => c.name === 'module')) return;
+  db.exec("ALTER TABLE headlines ADD COLUMN module TEXT NOT NULL DEFAULT 'hormuz'");
+  console.log('[db] added headlines.module column (backfilled existing rows as \'hormuz\')');
 }
 
 // --- series -----------------------------------------------------------------
@@ -127,32 +170,40 @@ export function vesselsDailySince(sinceDate) {
 
 // --- headlines ----------------------------------------------------------------
 
-export function putHeadline(h) {
+/** @param {string} [module] which domain this headline belongs to (default 'hormuz') */
+export function putHeadline(h, module = 'hormuz') {
   db.prepare(
-    'INSERT OR IGNORE INTO headlines (ts, title, url, source, tone) VALUES (?, ?, ?, ?, ?)'
-  ).run(h.ts, h.title, h.url, h.source ?? null, h.tone ?? null);
+    'INSERT OR IGNORE INTO headlines (ts, title, url, source, tone, module) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(h.ts, h.title, h.url, h.source ?? null, h.tone ?? null, module);
 }
 
-/** @returns {Array<any>} */
-export function recentHeadlines(limit = 20) {
+/** @param {string} [module] filter to one domain's headlines; omit for all */
+export function recentHeadlines(limit = 20, module) {
+  if (module) {
+    return /** @type {any} */ (
+      db.prepare('SELECT ts, title, url, source, tone, module FROM headlines WHERE module = ? ORDER BY ts DESC LIMIT ?')
+        .all(module, limit)
+    );
+  }
   return /** @type {any} */ (
-    db.prepare('SELECT ts, title, url, source, tone FROM headlines ORDER BY ts DESC LIMIT ?')
+    db.prepare('SELECT ts, title, url, source, tone, module FROM headlines ORDER BY ts DESC LIMIT ?')
       .all(limit)
   );
 }
 
-// --- hpi ----------------------------------------------------------------------
+// --- index snapshots (generic — any domain's index) --------------------------
 
-export function putHpiSnapshot(s) {
+/** @param {string} indexName e.g. 'hormuz', 'infoenv' */
+export function putIndexSnapshot(indexName, s) {
   db.prepare(
-    'INSERT OR REPLACE INTO hpi_snapshots (ts, hpi, band, components, version) VALUES (?, ?, ?, ?, ?)'
-  ).run(s.ts, s.hpi, s.band, JSON.stringify(s.components), s.version);
+    'INSERT OR REPLACE INTO index_snapshots (index_name, ts, value, band, components, version) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(indexName, s.ts, s.value, s.band, JSON.stringify(s.components), s.version);
 }
 
-/** @returns {any | undefined} */
-export function latestHpiSnapshot() {
+/** @param {string} indexName @returns {any | undefined} */
+export function latestIndexSnapshot(indexName) {
   const row = /** @type {any} */ (
-    db.prepare('SELECT * FROM hpi_snapshots ORDER BY ts DESC LIMIT 1').get()
+    db.prepare('SELECT * FROM index_snapshots WHERE index_name = ? ORDER BY ts DESC LIMIT 1').get(indexName)
   );
   if (row) row.components = JSON.parse(row.components);
   return row;
