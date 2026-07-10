@@ -25,7 +25,7 @@ export interface IndexComponent {
   ts: number;
 }
 
-/** Hormuz's index snapshot, as mapped back by http.js's latestHpiSnapshot() wrapper. */
+/** Dormant Hormuz's index snapshot shape — kept for type completeness only; no longer surfaced live. */
 export interface HpiSnapshot {
   ts: number;
   hpi: number;
@@ -35,7 +35,7 @@ export interface HpiSnapshot {
   version: string;
 }
 
-/** A generic index_snapshots row (e.g. infoenv) — field is `value`, not `hpi`. */
+/** A generic index_snapshots row (nordic, infoenv) — field is `value`. */
 export interface IndexSnapshot {
   ts: number;
   value: number;
@@ -72,10 +72,12 @@ export interface AisStatus {
   streaming: boolean;
 }
 
-export interface HormuzModule {
-  hpi: HpiSnapshot | null;
+/** Domain 1: Nordic tension. No transitsToday — gate-crossing detection is
+ * disabled (no chokepoint geometry in the open Baltic), so that field would
+ * be a permanently-fabricated zero rather than an honest omission. */
+export interface NordicModule {
+  index: IndexSnapshot | null;
   vessels: Vessel[];
-  transitsToday: { in: number; out: number };
   uniqueLargeToday: { tankers: number; cargo: number };
   headlines: Headline[];
   events: DomainEvent[];
@@ -94,7 +96,7 @@ export interface AppState {
   jobs: Record<string, { lastSuccess: number | null; lastError: number | null; lastErrorMsg: string | null }>;
   metrics: Record<string, MetricPoint>;
   modules: {
-    hormuz: HormuzModule;
+    nordic: NordicModule;
     infoenv: InfoenvModule;
   };
 }

@@ -15,7 +15,7 @@ async function boot() {
   await initI18n();
   const state = await getState();
 
-  initMap(document.getElementById('map')!, state.modules.hormuz.vessels, state.modules.hormuz.flights?.aircraft ?? []);
+  initMap(document.getElementById('map')!, state.modules.nordic.vessels, state.modules.nordic.flights?.aircraft ?? []);
   await status.init(state);
   layers.init(state);
   await markets.init(state);
@@ -27,8 +27,7 @@ async function boot() {
 
   connectSSE({
     vessels: (delta) => { updateVessels(delta); layers.onVessels(delta); },
-    transit: (tr) => { status.onTransit(tr); layers.onTransit(tr); },
-    hpi: status.onHpi,
+    nordic_index: status.onNordicIndex,
     metric: (m) => { markets.onMetric(m); hilkka.onMetric(m); layers.onMetric(m); },
     headline: (h) => { markets.onHeadline(h); layers.onHeadline(); },
     flights: (data) => { updateFlights(data); layers.onFlights(data); },

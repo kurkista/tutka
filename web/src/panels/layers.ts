@@ -1,7 +1,8 @@
 // panels/layers.ts — left panel "Live layers" status card: one row per data
-// layer (Ships, Flights, News, Markets) with a status dot + summary numbers,
-// so a visitor can see at a glance which feeds are live vs degraded vs off,
+// layer (Ships, Flights, News) with a status dot + summary numbers, so a
+// visitor can see at a glance which feeds are live vs degraded vs off,
 // instead of an empty section silently reading as "nothing is happening".
+// No Markets row — there's no Nordic equivalent to Hormuz's Brent feed.
 import type { AppState } from '../types';
 import { t, fmtNum } from '../i18n';
 
@@ -16,25 +17,22 @@ interface LayerRow {
 
 // Freshness thresholds are deliberately looser than each poller's own cadence
 // (config.js pollMs) so a single missed cycle doesn't flip the dot to amber.
-const NEWS_FRESH_MS = 3 * 3600_000; // matches server HPI.stalenessMs.N
-const MARKETS_FRESH_MS = 90 * 60_000; // brent_quote polls hourly
+const NEWS_FRESH_MS = 3 * 3600_000; // matches server NORDIC.stalenessMs.V
 const FLIGHTS_FRESH_MS = 10 * 60_000; // opensky polls every 2 min, 5-run cooldown
 
 let state: AppState;
 const vessels = new Map<number, true>();
-let transitsToday = { in: 0, out: 0 };
 let flightsCount = 0;
 let flightsTs = 0;
 let headlinesCount = 0;
 
 export function init(s: AppState): void {
   state = s;
-  const hormuz = s.modules.hormuz;
-  transitsToday = { ...hormuz.transitsToday };
-  for (const v of hormuz.vessels) vessels.set(v.mmsi, true);
-  flightsCount = hormuz.flights?.aircraft?.length ?? 0;
-  flightsTs = hormuz.flights?.ts ?? 0;
-  headlinesCount = hormuz.headlines.length;
+  const nordic = s.modules.nordic;
+  for (const v of nordic.vessels) vessels.set(v.mmsi, true);
+  flightsCount = nordic.flights?.aircraft?.length ?? 0;
+  flightsTs = nordic.flights?.ts ?? 0;
+  headlinesCount = nordic.headlines.length;
   render();
   setInterval(render, 60_000);
 }
@@ -45,14 +43,8 @@ export function onVessels(delta: { upsert?: { mmsi: number }[]; remove?: number[
   render();
 }
 
-export function onTransit(tr: { dir: 'in' | 'out' }): void {
-  transitsToday[tr.dir]++;
-  render();
-}
-
 export function onMetric(m: { metric: string; ts: number; value: number }): void {
-  if (m.metric === 'gdelt_vol24h') state.metrics.gdelt_vol24h = { ts: m.ts, value: m.value };
-  else if (m.metric === 'brent_intraday') state.metrics.brent_intraday = { ts: m.ts, value: m.value };
+  if (m.metric === 'gdelt_nordic_vol24h') state.metrics.gdelt_nordic_vol24h = { ts: m.ts, value: m.value };
   else return;
   render();
 }
@@ -77,7 +69,7 @@ function ageLabel(ts: number | null | undefined): string {
 }
 
 function shipsRow(): LayerRow {
-  const ais = state.modules.hormuz.ais;
+  const ais = state.modules.nordic.ais;
   let status: DotStatus;
   let detail: string;
   if (ais.disabled) {
@@ -89,13 +81,8 @@ function shipsRow(): LayerRow {
   } else {
     status = 'warning'; detail = t('ais.reconnecting');
   }
-  const u = state.modules.hormuz.uniqueLargeToday;
-  const nums = t('layers.shipsNums', {
-    n: vessels.size,
-    in: transitsToday.in,
-    out: transitsToday.out,
-    u: u.tankers + u.cargo,
-  });
+  const u = state.modules.nordic.uniqueLargeToday;
+  const nums = t('layers.shipsNums', { n: vessels.size, u: u.tankers + u.cargo });
   return { key: 'ships', status, nums, detail };
 }
 
@@ -112,7 +99,7 @@ function flightsRow(): LayerRow {
 }
 
 function newsRow(): LayerRow {
-  const vol = state.metrics.gdelt_vol24h;
+  const vol = state.metrics.gdelt_nordic_vol24h;
   const fresh = vol && Date.now() - vol.ts < NEWS_FRESH_MS;
   const status: DotStatus = fresh ? 'good' : 'warning';
   const detail = fresh ? t('layers.live') : t('layers.newsBlocked');
@@ -122,18 +109,8 @@ function newsRow(): LayerRow {
   return { key: 'news', status, nums, detail };
 }
 
-function marketsRow(): LayerRow {
-  const px = state.metrics.brent_intraday ?? state.metrics.brent_usd;
-  if (!px) return { key: 'markets', status: 'muted', nums: '–', detail: t('layers.degraded') };
-  const fresh = Date.now() - px.ts < MARKETS_FRESH_MS;
-  const status: DotStatus = fresh ? 'good' : 'warning';
-  const detail = fresh ? t('layers.live') : t('layers.degraded');
-  const nums = t('layers.marketsNums', { price: fmtNum(px.value, 2), age: ageLabel(px.ts) });
-  return { key: 'markets', status, nums, detail };
-}
-
 function render(): void {
-  const rows = [shipsRow(), flightsRow(), newsRow(), marketsRow()];
+  const rows = [shipsRow(), flightsRow(), newsRow()];
   const ul = document.getElementById('layers-list')!;
   ul.innerHTML = rows
     .map(

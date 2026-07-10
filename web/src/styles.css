@@ -43,6 +43,22 @@ html, body { margin: 0; height: 100%; background: var(--page); color: var(--ink-
   font-weight: 600; font-size: 14px; color: var(--ink);
 }
 .band-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+/* Nordic (domain 1) + Information Environment (domain 3) bands — both use
+   the same good/warning/serious/critical tier convention (higher = calmer). */
+.band-CALM .band-dot { background: var(--status-good); }
+.band-ELEVATED .band-dot { background: var(--status-warning); }
+.band-HEIGHTENED .band-dot { background: var(--status-serious); }
+.band-CRITICAL .band-dot { background: var(--status-critical); }
+.band-CALM { border-color: var(--status-good); }
+.band-ELEVATED { border-color: var(--status-warning); }
+.band-HEIGHTENED { border-color: var(--status-serious); }
+.band-CRITICAL { border-color: var(--status-critical); }
+.band-ACTIVE .band-dot { background: var(--status-serious); }
+.band-SATURATED .band-dot { background: var(--status-critical); }
+.band-ACTIVE { border-color: var(--status-serious); }
+.band-SATURATED { border-color: var(--status-critical); }
+/* Dormant Hormuz bands — unused live, kept in case /api/export or a future
+   view ever renders them again. */
 .band-OPEN .band-dot { background: var(--status-good); }
 .band-RESTRICTED .band-dot { background: var(--status-warning); }
 .band-SEVERELY_DISRUPTED .band-dot { background: var(--status-serious); }

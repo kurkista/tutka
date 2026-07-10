@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>salmi — Strait of Hormuz passability monitor</title>
-  <meta name="description" content="Is the Strait of Hormuz open? Live ships, a transparent passability index, oil markets, news pressure — and what it means in Finland." />
+  <title>tutka — Nordic/Baltic tension monitor</title>
+  <meta name="description" content="How tense is the Nordic/Baltic region right now? Live ships and flights, a transparent tension index, news pressure — and what it means in Finland." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛳️</text></svg>" />
 </head>
 <body>
@@ -35,15 +35,6 @@
         <h2 data-i18n="layers.title">Live layers</h2>
         <ul id="layers-list" class="layers"></ul>
       </section>
-      <section>
-        <h2 data-i18n="status.transitsTitle">Daily transits (IMF PortWatch)</h2>
-        <div id="transit-spark" class="spark"></div>
-        <p class="fineprint" id="pw-latest"></p>
-      </section>
-      <section>
-        <h2 data-i18n="status.tickerTitle">Live gate crossings</h2>
-        <ul id="ticker" class="ticker"><li class="muted" data-i18n="status.tickerEmpty">Waiting for ships to cross the narrows…</li></ul>
-      </section>
     </aside>
 
     <div id="center">
@@ -68,15 +59,6 @@
     </div>
 
     <aside id="right" class="panel">
-      <section>
-        <h2 data-i18n="markets.title">Markets</h2>
-        <div class="submarket-label" data-i18n="markets.brentTitle">Brent crude (USD/bbl)</div>
-        <div id="brent-now" class="bignum">–</div>
-        <div id="brent-chart" class="chart"></div>
-        <div class="submarket-label submarket-label-2" data-i18n="markets.oddsTitle">Prediction market</div>
-        <div id="poly-chip" class="odds-chip">–</div>
-        <p class="fineprint" id="poly-desc" data-i18n="markets.oddsDesc">Polymarket: traffic returns to normal by Jul 31</p>
-      </section>
       <section id="suomi-card">
         <h2>🇫🇮 <span data-i18n="hilkka.tab">Finland impact</span></h2>
         <ul id="suomi-card-lines" class="hilkka-lines"><li class="muted">…</li></ul>

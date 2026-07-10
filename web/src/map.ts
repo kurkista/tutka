@@ -1,5 +1,5 @@
-// map.ts — MapLibre map with the live vessel layer and the transit gate line.
-// Basemap: CARTO dark-matter (free with attribution, no key).
+// map.ts — MapLibre map with the live vessel/flight layers over the Gulf of
+// Finland/Baltic. Basemap: CARTO dark-matter (free with attribution, no key).
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Vessel } from './types';
@@ -75,8 +75,8 @@ export function initMap(container: HTMLElement, initial: Vessel[], initialFlight
   map = new maplibregl.Map({
     container,
     style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-    center: [56.4, 26.35], // the narrows
-    zoom: 7.4,
+    center: [25.5, 59.8], // Gulf of Finland
+    zoom: 6.6,
     attributionControl: { compact: true },
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
@@ -84,21 +84,8 @@ export function initMap(container: HTMLElement, initial: Vessel[], initialFlight
   map.on('load', () => {
     map.addImage('vessel-arrow', arrowImage(), { sdf: true });
 
-    // transit gate (56.5°E across the narrows) — subtle dashed line
-    map.addSource('gate', {
-      type: 'geojson',
-      data: {
-        type: 'Feature',
-        geometry: { type: 'LineString', coordinates: [[56.5, 25.9], [56.5, 26.9]] },
-        properties: {},
-      },
-    });
-    map.addLayer({
-      id: 'gate-line',
-      type: 'line',
-      source: 'gate',
-      paint: { 'line-color': '#c3c2b7', 'line-opacity': 0.45, 'line-width': 1.5, 'line-dasharray': [2, 3] },
-    });
+    // No gate line — gate-crossing detection is disabled (GATE.enabled=false,
+    // no single chokepoint meridian in the open Baltic).
 
     map.addSource('vessels', { type: 'geojson', data: toFeatureCollection() });
 
