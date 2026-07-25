@@ -224,6 +224,22 @@ export function latestIndexSnapshot(indexName, version) {
   return row;
 }
 
+/**
+ * Timestamp of the first snapshot written by `version`, or undefined if that
+ * version has never scored. Lets callers clip a `{name}_index` series to the
+ * era of the formula currently in force: v0's index and v1's are different
+ * quantities on the same 0–100 axis (v0: high = calm, v1: high = unusual), so
+ * plotting them on one line draws a cliff at the deploy that reads as an event.
+ *
+ * @param {string} indexName @param {string} version
+ */
+export function firstIndexSnapshotTs(indexName, version) {
+  const row = /** @type {any} */ (
+    db.prepare('SELECT MIN(ts) AS ts FROM index_snapshots WHERE index_name = ? AND version = ?').get(indexName, version)
+  );
+  return row?.ts ?? undefined;
+}
+
 // --- maintenance ---------------------------------------------------------------
 
 // Nightly prune: intraday metrics don't need to outlive 90 days (daily series

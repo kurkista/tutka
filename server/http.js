@@ -10,7 +10,7 @@ import {
   NORDIC, INFOENV, INFRA, SOCIAL, HYBRID, CLIMATE,
 } from './config.js';
 import {
-  latestSeries, seriesSince, latestIndexSnapshot, recentHeadlines,
+  latestSeries, seriesSince, latestIndexSnapshot, firstIndexSnapshotTs, recentHeadlines,
   vesselsDailySince, transitsSince,
 } from './db.js';
 
@@ -41,6 +41,14 @@ function latestHpiSnapshot() {
   if (!row) return undefined;
   return { ts: row.ts, hpi: row.value, band: row.band, components: row.components, used: row.used, version: row.version };
 }
+
+/** `{name}_index` series → the domain whose current version defines its era. */
+const INDEX_ERA = Object.fromEntries(
+  /** @type {[string, {version: string}][]} */ ([
+    ['nordic', NORDIC], ['infoenv', INFOENV], ['infra', INFRA],
+    ['social', SOCIAL], ['hybrid', HYBRID], ['climate', CLIMATE],
+  ]).map(([name, c]) => [`${name}_index`, { name, version: c.version }]),
+);
 
 /** @param {{store: import('./vessels.js').VesselStore}} deps */
 export function startHttp({ store }) {
@@ -145,7 +153,13 @@ export function startHttp({ store }) {
     const { metric } = req.params;
     if (!PUBLIC_METRICS.includes(metric)) return res.status(404).json({ error: 'unknown metric' });
     const days = Math.min(Number(req.query.days) || 30, 400);
-    res.json(seriesSince(metric, Date.now() - days * 24 * 3600_000).map((r) => [r.ts, r.value]));
+    let since = Date.now() - days * 24 * 3600_000;
+    // An index series carries no version tag of its own, so clip it to the era
+    // of the formula in force — otherwise every chart of it draws a step at
+    // the version bump that looks like an event and isn't one.
+    const era = INDEX_ERA[metric];
+    if (era) since = Math.max(since, firstIndexSnapshotTs(era.name, era.version) ?? Infinity);
+    res.json(seriesSince(metric, since).map((r) => [r.ts, r.value]));
   });
 
   app.get('/api/firms/hotspots', (req, res) => {
