@@ -5,16 +5,22 @@
 import type * as echarts from 'echarts/core';
 import type { AppState, IndexSnapshot } from '../types';
 import { t, fmtNum } from '../i18n';
-import { makeGauge, setGauge, bindResize } from '../charts';
+import { makeGauge, setGauge } from '../charts';
+import { onFirstView, trackChart } from '../lazyView';
+import { readingFor } from '../reading';
 
 const COMPONENT_KEYS = ['V', 'T'] as const;
 
-let gauge: echarts.ECharts;
+let gauge: echarts.ECharts | null = null;
+let latest: IndexSnapshot | null = null;
 
 export async function init(s: AppState): Promise<void> {
-  gauge = makeGauge(document.getElementById('hpi-gauge')!);
   renderIndex(s.modules.nordic.index);
-  bindResize(gauge);
+  onFirstView('1', () => {
+    gauge = makeGauge(document.getElementById('hpi-gauge')!);
+    trackChart('1', gauge);
+    setGauge(gauge, latest?.value ?? null);
+  });
 }
 
 export function onNordicIndex(snapshot: IndexSnapshot): void {
@@ -22,14 +28,18 @@ export function onNordicIndex(snapshot: IndexSnapshot): void {
 }
 
 function renderIndex(snapshot: IndexSnapshot | null): void {
+  latest = snapshot;
   const chip = document.getElementById('band-chip')!;
   const label = document.getElementById('band-label')!;
   chip.className = 'band-chip ' + (snapshot ? `band-${snapshot.band}` : 'band-none');
+  // The chip sits in global chrome on every route but only ever describes
+  // domain 1, which nothing on screen used to say.
+  chip.title = `${t('domain.1.name')} — ${readingFor(snapshot).detail}`;
   label.textContent = snapshot
-    ? `${t('band.' + snapshot.band)} · ${Math.round(snapshot.value)}`
+    ? `${t('domain.1.short')} ${Math.round(snapshot.value)} · ${t('band.' + snapshot.band)}`
     : t('status.warming');
 
-  if (snapshot) setGauge(gauge, snapshot.value);
+  if (gauge) setGauge(gauge, snapshot?.value ?? null);
 
   const list = document.getElementById('hpi-components')!;
   list.innerHTML = '';

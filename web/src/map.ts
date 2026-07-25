@@ -5,8 +5,20 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Vessel } from './types';
 import { t } from './i18n';
 
-const COLORS = { tanker: '#c98500', cargo: '#3987e5', other: '#898781' };
-const FLIGHT_COLOR = '#9085e9';
+// Read from styles.css rather than restated here — map.ts carried its own
+// palette through the "calm theme" rebrand (which only touched the
+// stylesheet) and had drifted a full generation behind the rest of the UI.
+const token = (name: string, fallback: string): string =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+
+const COLORS = {
+  tanker: token('--tanker', '#c98f4a'),
+  cargo: token('--cargo', '#5b8dbe'),
+  other: token('--other', '#7c8985'),
+};
+const FLIGHT_COLOR = token('--series-4', '#9085e9');
+const LEGEND_BG = token('--surface', '#1c2124');
+const LEGEND_INK = token('--ink-2', '#b7c0bd');
 
 interface Aircraft { icao: string; cs: string | null; lon: number; lat: number; alt: number | null; trk: number | null }
 
@@ -214,9 +226,9 @@ export const vesselCount = () => vessels.size;
 
 function addLegend(container: HTMLElement) {
   const el = document.createElement('div');
-  el.style.cssText =
-    'position:absolute;bottom:26px;left:10px;z-index:5;background:rgba(26,26,25,.85);' +
-    'border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 10px;font-size:11.5px;color:#c3c2b7';
+  el.className = 'map-legend';
+  el.style.setProperty('--legend-bg', LEGEND_BG);
+  el.style.setProperty('--legend-ink', LEGEND_INK);
   el.innerHTML = (['tanker', 'cargo', 'other'] as const)
     .map((c) => `<span style="color:${COLORS[c]}">●</span> ${t('legend.' + c)}`)
     .join('&nbsp;&nbsp;') +

@@ -70,9 +70,14 @@ jobs:
           sleep 12
           if fetch_json "${base}&mode=artlist&maxrecords=20&sort=datedesc&format=json" articles.json; then got_articles=1; fi
 
-          hour_min=$(date -u +%H:%M)
+          # Once a day, in the 03:00 UTC hour. This used to compare
+          # "$hour_min" strictly against "03:00" and "03:30" — but the cron is
+          # */30, so the scheduled fire times are exactly those two strings and
+          # both strict comparisons were false. It only ever fired when GitHub
+          # happened to run the job late. Matching the hour is what was meant.
+          hour=$(date -u +%H)
           send_calm="${{ github.event.inputs.send_calm }}"
-          if [ "$send_calm" = "true" ] || [ "$hour_min" \> "03:00" -a "$hour_min" \< "03:30" ]; then
+          if [ "$send_calm" = "true" ] || [ "$hour" = "03" ]; then
             sleep 12
             if fetch_json "${base}&mode=timelinevolraw&startdatetime=20250101000000&enddatetime=20251231235959&format=json" calm.json; then got_calm=1; fi
           fi

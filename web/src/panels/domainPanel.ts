@@ -1,19 +1,21 @@
 // panels/domainPanel.ts — one generic deep-dive renderer shared by domains
-// 2 (hybrid), 4 (infra), 5 (social) and 6 (climate): all four expose the same
-// {index, headlines, advisories?} shape from /api/state (see types.ts's
-// GenericDomainModule), so unlike domain 1 (map/live-layers) or domain 3
-// (first hand-written, kept as-is) they don't need their own file — same
-// "one engine, per-domain config" idea the backend already uses in
-// indices/engine.js. Each domain still gets its own DOM ids (passed in via
+// 2 (hybrid), 3 (infoenv), 4 (infra), 5 (social) and 6 (climate): all five
+// expose the same {index, headlines, advisories?} shape from /api/state (see
+// types.ts's GenericDomainModule), so unlike domain 1 (map/live-layers) they
+// don't need their own file — same "one engine, per-domain config" idea the
+// backend uses in indices/domainIndex.js. Domain 3 had a hand-written twin of
+// this file until v1; it differed only in DOM id prefix. Each domain still gets its own DOM ids (passed in via
 // `key`) so a domain-specific extra widget (Fingrid traffic lights, FIRMS
 // hotspot count, consumer confidence) can live alongside this in index.html
 // without this module needing to know about it.
 import type * as echarts from 'echarts/core';
 import type { GenericDomainModule, IndexSnapshot, Headline } from '../types';
 import { t, fmtNum } from '../i18n';
-import { makeGauge, setGauge, bindResize, makeVTSparkline } from '../charts';
+import { makeGauge, setGauge, makeVTSparkline } from '../charts';
 import { getSeries } from '../api';
 import { headlineChip } from '../headlineChip';
+import { onFirstView, trackChart } from '../lazyView';
+import { readingFor, componentTooltip } from '../reading';
 
 export interface DomainPanelController {
   init(mod: GenericDomainModule): void;
@@ -27,18 +29,20 @@ export interface DomainPanelController {
  * @param componentKeys index component keys in display order, e.g. ['V','T'] or ['V','T','C']
  * @param hasAdvisories whether this domain has a separate #{key}-advisories list
  * @param vtSeriesPrefix if set (e.g. 'gdelt_social_'), fetches 30d volume/tone
- *   history and renders it into #{key}-vt-chart — only domains 3/5/6 opted
- *   into this, see the scoped visualization-pass plan.
+ *   history and renders it into #{key}-vt-chart, when the page has that slot.
+ * @param view route key this panel's charts belong to, for lazyView
  */
 export function createDomainPanel(
   key: string,
   componentKeys: readonly string[],
   hasAdvisories: boolean,
   vtSeriesPrefix?: string,
+  view = key,
 ): DomainPanelController {
-  let gauge: echarts.ECharts;
+  let gauge: echarts.ECharts | null = null;
+  let latest: IndexSnapshot | null = null;
 
-  async function initVTChart(): Promise<void> {
+  async function buildVTChart(): Promise<void> {
     if (!vtSeriesPrefix) return;
     const el = document.getElementById(`${key}-vt-chart`);
     if (!el) return;
@@ -47,20 +51,32 @@ export function createDomainPanel(
         getSeries(`${vtSeriesPrefix}vol24h`),
         getSeries(`${vtSeriesPrefix}tone`),
       ]);
-      const chart = makeVTSparkline(el, vol, tone);
-      bindResize(chart);
+      trackChart(view, makeVTSparkline(el, vol, tone));
     } catch {
-      el.innerHTML = `<p class="fineprint">${t('status.noData')}</p>`;
+      // Replacing the container's innerHTML destroys the mount node, so a
+      // retry would have nowhere to render. Use a sibling note instead.
+      el.insertAdjacentHTML('afterend', `<p class="fineprint">${t('status.noData')}</p>`);
     }
   }
 
+  function buildGauge(): void {
+    gauge = makeGauge(document.getElementById(`${key}-gauge`)!);
+    trackChart(view, gauge);
+    setGauge(gauge, latest?.value ?? null);
+  }
+
   function renderIndex(snapshot: IndexSnapshot | null): void {
+    latest = snapshot;
     const bandEl = document.getElementById(`${key}-band`)!;
+    const reading = readingFor(snapshot);
+    bandEl.className = snapshot ? `band-line band-${snapshot.band}` : 'band-line';
     bandEl.textContent = snapshot
-      ? `${t('band.' + snapshot.band)} · ${Math.round(snapshot.value)}`
+      ? `${t('band.' + snapshot.band)} · ${Math.round(snapshot.value)} — ${reading.detail}`
       : t('status.warming');
 
-    if (snapshot) setGauge(gauge, snapshot.value);
+    // The gauge only exists once this domain has been visited; SSE updates
+    // arriving before then are held in `latest` and applied on build.
+    if (gauge) setGauge(gauge, snapshot?.value ?? null);
 
     const list = document.getElementById(`${key}-components`)!;
     list.innerHTML = '';
@@ -69,9 +85,14 @@ export function createDomainPanel(
       const c = snapshot?.components[ck];
       if (c) {
         li.innerHTML = `<span>${t('comp.' + ck)}</span><span class="val">${fmtNum(c.score, 0)}</span>`;
-        li.title = JSON.stringify(c.raw);
+        li.title = componentTooltip(c);
       } else {
-        li.innerHTML = `<span>${t('comp.' + ck)}</span><span class="stale">${t('comp.stale')}</span>`;
+        // A missing component means "stale" only when the domain is otherwise
+        // reporting. With no snapshot at all the cause is almost always too
+        // little history for a baseline, and calling that "stale — excluded"
+        // blames the feed for something that is just the domain being young.
+        const why = snapshot ? t('comp.stale') : t('card.noBaseline');
+        li.innerHTML = `<span>${t('comp.' + ck)}</span><span class="stale">${why}</span>`;
       }
       list.appendChild(li);
     }
@@ -96,12 +117,10 @@ export function createDomainPanel(
 
   return {
     init(mod: GenericDomainModule): void {
-      gauge = makeGauge(document.getElementById(`${key}-gauge`)!);
       renderIndex(mod.index);
-      bindResize(gauge);
       renderList(`${key}-headlines`, mod.headlines);
       if (hasAdvisories) renderList(`${key}-advisories`, mod.advisories ?? []);
-      void initVTChart();
+      onFirstView(view, () => { buildGauge(); return buildVTChart(); });
     },
     onIndex(snapshot: IndexSnapshot): void {
       renderIndex(snapshot);

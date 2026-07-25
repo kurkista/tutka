@@ -8,7 +8,12 @@
 import maplibregl from 'maplibre-gl';
 import type { AppState } from '../types';
 import { t, fmtNum, fmtDate } from '../i18n';
-import { makeSimpleSparkline, bindResize } from '../charts';
+import { makeSimpleSparkline } from '../charts';
+import { onFirstView, trackChart } from '../lazyView';
+
+/** Fire dots and their sparkline share one colour, read from styles.css. */
+const HOTSPOT_COLOR = getComputedStyle(document.documentElement)
+  .getPropertyValue('--series-2').trim() || '#c98f4a';
 import { getSeries, getFirmsHotspots } from '../api';
 
 const POWER_STATE_LABELS: Record<number, { key: string; dot: string }> = {
@@ -63,13 +68,15 @@ function fingridRow(nameKey: string, value: number | null, labels: Record<number
   return li;
 }
 
-export async function initSocialExtras(state: AppState): Promise<void> {
+export function initSocialExtras(state: AppState): void {
   renderConfidence(state.metrics.social_consumer_confidence ?? null);
-  try {
-    const series = await getSeries('social_consumer_confidence', 400); // monthly data — 400d ≈ 13 points
-    const el = document.getElementById('social-confidence-chart');
-    if (el && series.length > 1) bindResize(makeSimpleSparkline(el, series));
-  } catch { /* sparkline is a bonus — the numeric reading above already rendered */ }
+  onFirstView('5', async () => {
+    try {
+      const series = await getSeries('social_consumer_confidence', 400); // monthly data — 400d ≈ 13 points
+      const el = document.getElementById('social-confidence-chart');
+      if (el && series.length > 1) trackChart('5', makeSimpleSparkline(el, series));
+    } catch { /* sparkline is a bonus — the numeric reading above already rendered */ }
+  });
 }
 
 export function onSocialMetric(m: { metric: string; ts: number; value: number }): void {
@@ -83,14 +90,16 @@ function renderConfidence(metric: { ts: number; value: number } | null): void {
     : `<p class="fineprint">${t('status.noData')}</p>`;
 }
 
-export async function initClimateExtras(state: AppState): Promise<void> {
+export function initClimateExtras(state: AppState): void {
   renderHotspots(state.metrics.firms_hotspot_count ?? null);
-  try {
-    const series = await getSeries('firms_hotspot_count', 30);
-    const el = document.getElementById('climate-hotspots-chart');
-    if (el && series.length > 1) bindResize(makeSimpleSparkline(el, series, '#ec835a'));
-  } catch { /* sparkline is a bonus */ }
-  await initHotspotMap();
+  onFirstView('6', async () => {
+    try {
+      const series = await getSeries('firms_hotspot_count', 30);
+      const el = document.getElementById('climate-hotspots-chart');
+      if (el && series.length > 1) trackChart('6', makeSimpleSparkline(el, series, HOTSPOT_COLOR));
+    } catch { /* sparkline is a bonus */ }
+    await initHotspotMap();
+  });
 }
 
 export function onClimateMetric(m: { metric: string; ts: number; value: number }): void {
@@ -106,9 +115,9 @@ function renderHotspots(metric: { ts: number; value: number } | null): void {
 
 let hotspotMap: maplibregl.Map | undefined;
 
-/** Domain views start `hidden` and the map is built at boot() time before
- * routing reveals anything, so MapLibre measures a 0×0 container and never
- * recovers on its own — main.ts calls this after unhiding domain-content-6. */
+/** Built on first view of domain 6 now, so it measures a real container.
+ * Still resized explicitly by the router: MapLibre needs it after any spell
+ * spent hidden, not just at construction. */
 export function resizeHotspotMap(): void {
   hotspotMap?.resize();
 }
@@ -122,7 +131,13 @@ async function initHotspotMap(): Promise<void> {
   let points: { lat: number; lon: number }[] = [];
   try {
     points = (await getFirmsHotspots()).points;
-  } catch { /* map still renders, just empty */ }
+  } catch { /* map still renders, just empty — see the note added below */ }
+
+  // An empty dot layer over a dark basemap is indistinguishable from a broken
+  // one. Say which it is, in keeping with "gaps are shown, never hidden".
+  if (points.length === 0) {
+    container.insertAdjacentHTML('afterend', `<p class="fineprint">${t('climate.mapEmpty')}</p>`);
+  }
 
   hotspotMap = new maplibregl.Map({
     container,
@@ -149,10 +164,10 @@ async function initHotspotMap(): Promise<void> {
       type: 'circle',
       source: 'hotspots',
       paint: {
-        'circle-color': '#ec835a',
+        'circle-color': HOTSPOT_COLOR,
         'circle-radius': 4,
         'circle-opacity': 0.85,
-        'circle-stroke-color': '#1a1a19',
+        'circle-stroke-color': getComputedStyle(document.documentElement).getPropertyValue('--page').trim() || '#14181a',
         'circle-stroke-width': 0.8,
       },
     });

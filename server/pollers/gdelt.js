@@ -69,7 +69,17 @@ export function storeGdeltVolume(volJson, now, cfg) {
   const points = timelinePoints(volJson);
   if (points.length === 0) throw new Error('gdelt: empty volume timeline');
 
-  const vol24h = points.filter((p) => p.ts >= now - 24 * 3600_000).reduce((a, p) => a + p.value, 0);
+  // A 30d timeline can come back non-empty but with nothing in the last 24h —
+  // GDELT's index lags, or the relay got a truncated response. Summing that
+  // empty slice yields 0, and storing it claims "no news happened", which is
+  // indistinguishable from a genuinely quiet day and drags the baseline down.
+  // 07-10..07-25 history shows this firing inside almost every day (a rolling
+  // 24h sum dropping 546 → 0 → 546 is not something news does). Fail the job
+  // instead and let the existing staleness path surface it.
+  const recent = points.filter((p) => p.ts >= now - 24 * 3600_000);
+  if (recent.length === 0) throw new Error('gdelt: volume timeline has no buckets in the last 24h');
+
+  const vol24h = recent.reduce((a, p) => a + p.value, 0);
   /** @type {Record<string, number>} */
   const byDay = {};
   for (const p of points) {

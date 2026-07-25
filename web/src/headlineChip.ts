@@ -1,32 +1,38 @@
-// headlineChip.ts — shared headline/advisory row renderer for all deep-dive
-// panels (domainPanel.ts's four domains + infoenv.ts's domain 3). Replaces
-// the plain <li><a>title</a><span>source</span></li> row with a colored
-// left-border chip so a list of 20 headlines reads as more than a wall of
-// text — the source name is hashed to a stable color, not looked up from a
-// palette, so a new/unlisted source domain never falls back to "uncolored".
+// headlineChip.ts — shared headline/advisory row renderer for every deep-dive
+// panel.
+//
+// v0 hashed the source name into one of seven colours. That looked like an
+// encoding but carried no information: the hash means nothing, ~10 sources
+// into 7 buckets collide constantly, so two unrelated outlets share a colour
+// while the reader is invited to believe it signifies something. On a site
+// whose whole premise is separating signal from normal, a decorative channel
+// dressed as a semantic one is the wrong trade.
+//
+// Colouring by article tone would have been real signal — but GDELT's artlist
+// mode returns `tone: null` for every row (checked against the live API), so
+// there is nothing to encode. Until there is, the chip carries structure and
+// recency instead, and no colour claim at all.
 import type { Headline } from './types';
-
-const CHIP_COLORS = ['#4fa6a6', '#3987e5', '#c98500', '#9085e9', '#5cab5c', '#c95c8a', '#5c9bc9'];
-
-function colorForSource(source: string | null): string {
-  const s = source ?? '';
-  let hash = 0;
-  for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) | 0;
-  return CHIP_COLORS[Math.abs(hash) % CHIP_COLORS.length];
-}
+import { fmtDate, fmtTime } from './i18n';
 
 export function headlineChip(h: Headline): HTMLLIElement {
   const li = document.createElement('li');
   li.className = 'headline-chip';
-  li.style.setProperty('--chip-color', colorForSource(h.source));
+
   const a = document.createElement('a');
   a.href = h.url;
   a.target = '_blank';
   a.rel = 'noopener';
   a.textContent = h.title;
+
   const src = document.createElement('span');
   src.className = 'src';
-  src.textContent = `${h.source ?? ''} · ${new Date(h.ts).toLocaleString()}`;
+  // Locale-aware, and consistent with every other timestamp on the site —
+  // v0 used raw toLocaleString() here, which ignored the language toggle.
+  src.textContent = [h.source, `${fmtDate(h.ts)} ${fmtTime(h.ts)}`]
+    .filter(Boolean)
+    .join(' · ');
+
   li.append(a, src);
   return li;
 }

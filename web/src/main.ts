@@ -5,13 +5,13 @@ import { getState, getRoadmap } from './api';
 import type { Headline } from './types';
 import { connectSSE } from './sse';
 import { initMap, updateVessels, updateFlights, resizeMap } from './map';
+import { activate, onFirstView } from './lazyView';
 import * as status from './panels/status';
 import * as markets from './panels/markets';
 import * as hilkka from './panels/hilkka';
 import * as layers from './panels/layers';
 import * as welcome from './panels/welcome';
 import * as timeline from './panels/timeline';
-import * as infoenv from './panels/infoenv';
 import * as dashboard from './panels/dashboard';
 import { initMethodology } from './panels/methodology';
 import { createDomainPanel } from './panels/domainPanel';
@@ -21,10 +21,16 @@ import {
   initClimateExtras, onClimateMetric, resizeHotspotMap,
 } from './panels/domainExtras';
 
-const hybrid = createDomainPanel('hybrid', ['V', 'T'], true);
-const infra = createDomainPanel('infra', ['V', 'T'], true);
-const social = createDomainPanel('social', ['V', 'T', 'C'], false, 'gdelt_social_');
-const climate = createDomainPanel('climate', ['V', 'T', 'F'], true, 'gdelt_climate_');
+// The last argument is the route key the panel's charts belong to, so
+// lazyView can build them the first time that domain is opened. Domain 3 used
+// to have its own hand-written module that duplicated this factory almost
+// line for line (its own header comment said as much); it differed only in
+// DOM id prefix, which is exactly what the factory parameterizes.
+const hybrid = createDomainPanel('hybrid', ['V', 'T'], true, 'gdelt_hybrid_', '2');
+const infoenv = createDomainPanel('infoenv', ['V', 'T'], false, 'gdelt_infoenv_', '3');
+const infra = createDomainPanel('infra', ['V', 'T'], true, 'gdelt_infra_', '4');
+const social = createDomainPanel('social', ['V', 'T', 'C'], false, 'gdelt_social_', '5');
+const climate = createDomainPanel('climate', ['V', 'T', 'F'], true, 'gdelt_climate_', '6');
 
 async function boot() {
   await initI18n();
@@ -32,20 +38,29 @@ async function boot() {
 
   dashboard.init(state);
 
-  initMap(document.getElementById('map')!, state.modules.nordic.vessels, state.modules.nordic.flights?.aircraft ?? []);
+  // The map holds a WebGL context and measures its container, so it waits for
+  // domain 1 to actually be opened. SSE deltas arriving before then accumulate
+  // in map.ts's module state and are drawn when it builds.
+  onFirstView('1', () => {
+    initMap(
+      document.getElementById('map')!,
+      state.modules.nordic.vessels,
+      state.modules.nordic.flights?.aircraft ?? [],
+    );
+  });
   await status.init(state);
   layers.init(state);
   await markets.init(state);
   await hilkka.init();
   await timeline.init(state);
-  infoenv.init(state);
+  infoenv.init(state.modules.infoenv);
   hybrid.init(state.modules.hybrid);
   infra.init(state.modules.infra);
   social.init(state.modules.social);
   climate.init(state.modules.climate);
   initInfraExtras(state);
-  void initSocialExtras(state);
-  void initClimateExtras(state);
+  initSocialExtras(state);
+  initClimateExtras(state);
   initMethodology();
   welcome.init();
   initViewToggle();
@@ -110,7 +125,9 @@ function initRouter(): void {
 }
 
 async function renderRoute(): Promise<void> {
-  const match = location.hash.match(/^#domain\/(\d)$/);
+  // `\d+`, not `\d` — the single-digit form silently failed to match
+  // #domain/10 and fell through to the dashboard.
+  const match = location.hash.match(/^#domain\/(\d+)$/);
   const dashboardView = document.getElementById('dashboard-view')!;
   const domainView = document.getElementById('domain-view')!;
 
@@ -125,15 +142,15 @@ async function renderRoute(): Promise<void> {
   domainView.hidden = false;
   for (const el of document.querySelectorAll<HTMLElement>('.domain-content')) el.hidden = true;
 
-  if (n === 1) {
-    document.getElementById('domain-content-1')!.hidden = false;
-    resizeMap(); // map container may have been hidden since last resize
-  } else if ([2, 3, 4, 5, 6].includes(n)) {
-    document.getElementById(`domain-content-${n}`)!.hidden = false;
-    // Gauges/sparklines/the FIRMS map were all built while this container was
-    // still `hidden` (boot() runs before the router sets initial visibility),
-    // so ECharts/MapLibre measured a 0×0 box and never recovered on their own.
-    window.dispatchEvent(new Event('resize'));
+  const content = document.getElementById(`domain-content-${n}`);
+  if (content) {
+    content.hidden = false;
+    // Now that the container has real dimensions, build this domain's charts
+    // (first visit only) and resize them. v0 dispatched a synthetic window
+    // resize here instead — and only for domains 2–6, which is why domain 1's
+    // timeline stayed stuck at the 100px ECharts fallback in production.
+    await activate(String(n));
+    if (n === 1) resizeMap();
     if (n === 6) resizeHotspotMap();
   } else {
     document.getElementById('domain-content-placeholder')!.hidden = false;

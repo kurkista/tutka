@@ -34,15 +34,24 @@ shared template: domain 4 shows Fingrid's grid-status traffic lights,
 domain 5 shows the latest StatFin consumer-confidence reading, domain 6
 shows the NASA FIRMS hotspot count.
 
-Every domain's index is versioned and fully explained in
-**[METHODOLOGY.md](METHODOLOGY.md)** (also rendered inside the app).
+Every domain answers one question: **how far is this domain from its own
+recent normal?** Each index reads 0 = normal, 100 = most unusual, scored as a
+two-sided robust deviation from that metric's own trailing 30 days. A domain
+without enough history to build a baseline reports nothing rather than a
+confident-looking zero.
+
+Every index is versioned and fully explained in
+**[METHODOLOGY.md](METHODOLOGY.md)** (also rendered inside the app) — including
+why v0's "level vs a fixed calm-2025 baseline" scoring was retired: it pinned
+the news-volume component at a constant 100 and left four of six domains
+arithmetically unable to leave their CALM band.
 
 ## Domain 1 — State & military tension (Nordic/Baltic)
 
 Tracks Finland/Baltic-NATO-Russia military and security tension: how loudly
 world media is talking about troop movements, airspace violations, and
-border incidents right now, vs. a calm-2025 baseline — the **Nordic Tension
-Index**. Live AIS ships and OpenSky flights over the Gulf of Finland/Baltic
+border incidents right now, against its own trailing 30 days — the **Nordic
+deviation index**. Live AIS ships and OpenSky flights over the Gulf of Finland/Baltic
 are shown as this domain's live layers (not scored — no honest signal exists
 yet from raw vessel/flight counts the way Hormuz's transit-count drop was).
 
@@ -124,9 +133,11 @@ One small Node app (Fly.io, 256 MB) that:
    generic `index_snapshots` table so each domain's index doesn't need its
    own bespoke schema,
 4. computes each domain's index via a shared weighted-scoring engine
-   (`server/indices/engine.js`) and serves a Vite/MapLibre/ECharts frontend:
-   a dashboard home (synthesis panel + six domain cards) with a per-domain
-   deep-dive view behind client-side hash routing (`#domain/N`).
+   (`server/indices/engine.js`), one deviation-scoring primitive
+   (`server/indices/deviation.js`) and one per-domain factory
+   (`server/indices/domainIndex.js`), then serves a Vite/MapLibre/ECharts
+   frontend: a dashboard home that leads with whatever is most unusual right
+   now, and a per-domain deep-dive behind hash routing (`#domain/N`).
 
 No accounts, no tracking, no paid data. Total hosting cost ≈ $2/month.
 

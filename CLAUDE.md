@@ -78,12 +78,22 @@ machinery (`SESSIONS.md`, `SESSION_NEXT.md`, etc.) uninvited. State lives in
 README/METHODOLOGY/ROADMAP, git history, and this file. If something new
 needs tracking, add a section here rather than proposing a new file.
 
-**Revisit hardcoded calendar years**
-`NORDIC`/`INFOENV`'s calm-baseline windows (`calmStart`/`calmEnd`) are
-currently pinned to calendar 2025 as "the last pre-crisis year." That
-assumption ages — periodically sanity-check whether 2025 is still a
-reasonable calm baseline as real time moves further past it, the same way
-you'd catch a hardcoded "current year" anywhere else.
+**Scoring is deviation from a rolling baseline, not level vs a fixed one**
+Since v1 (2026-07-25) every component is scored against its own trailing 30
+days — `server/indices/deviation.js`. The `calmStart`/`calmEnd` calendar-2025
+windows still exist in the GDELT poller config but no longer feed any live
+index; `*_base_daily` is contextual only. Don't reintroduce a fixed
+denominator: the v0 formula's `max(ratio, 1)` clamp pinned the volume
+component at a constant 100 and made four of six domains unable to leave
+their CALM band, which is documented at length in METHODOLOGY.md and is the
+single biggest correctness bug this project has shipped.
+
+**A component that can't be scored honestly reports null**
+Baselines require ≥48 samples over ≥3 days, and a constant series is
+unscoreable. New domains therefore read "building baseline" for their first
+days — that's intended. Resist the urge to paper over it with a default
+value; the whole point is that a broken or thin feed must never render as
+calm.
 
 **Vendor/service recommendations**
 Before recommending a new paid or data-handling third-party service, check

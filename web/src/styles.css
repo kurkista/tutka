@@ -16,9 +16,21 @@
   --border: rgba(255, 255, 255, 0.08);
 
   --accent: #4fa6a6;
-  --series-blue: #5b8dbe;
-  --tanker: #c98f4a;
-  --cargo: #5b8dbe;
+
+  /* Categorical series ramp. Ordered so adjacent entries stay separable at
+     1.8px stroke on the graphite ground — the v0 timeline drew news (#ec835a)
+     and tone (#c98500) next to each other, two oranges you could not tell
+     apart on a line chart. Read by charts.ts/map.ts via getComputedStyle;
+     nothing should restate these as literals. */
+  --series-1: #5b8dbe;
+  --series-2: #c98f4a;
+  --series-3: #4fa6a6;
+  --series-4: #9085e9;
+  --series-5: #b0736f;
+
+  --series-blue: var(--series-1);
+  --tanker: var(--series-2);
+  --cargo: var(--series-1);
   --other: #7c8985;
 
   --status-good: #4c9a6b;
@@ -35,7 +47,17 @@
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: var(--page); color: var(--ink-2); }
+html { height: 100%; }
+/* Column layout so the footer is pushed to the bottom on short pages. The
+   dashboard is only ~500px tall on a desktop, and without this it left a
+   band of empty page below the footer that read as a rendering failure. */
+body {
+  margin: 0; min-height: 100%;
+  display: flex; flex-direction: column;
+  background: var(--page); color: var(--ink-2);
+}
+body > main { flex: 1 0 auto; }
+#footer { flex: none; }
 a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--radius);
 }
@@ -56,33 +78,18 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
   font-family: var(--font-mono); font-weight: 500; font-size: 13px; color: var(--ink);
 }
 .band-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
-/* Nordic (domain 1) + Information Environment (domain 3) bands — both use
-   the same good/warning/serious/critical tier convention (higher = calmer). */
-.band-CALM .band-dot { background: var(--status-good); }
-.band-ELEVATED .band-dot { background: var(--status-warning); }
-.band-HEIGHTENED .band-dot { background: var(--status-serious); }
-.band-CRITICAL .band-dot { background: var(--status-critical); }
-.band-CALM { border-color: var(--status-good); }
-.band-ELEVATED { border-color: var(--status-warning); }
-.band-HEIGHTENED { border-color: var(--status-serious); }
-.band-CRITICAL { border-color: var(--status-critical); }
-.band-ACTIVE .band-dot { background: var(--status-serious); }
-.band-SATURATED .band-dot { background: var(--status-critical); }
-.band-ACTIVE { border-color: var(--status-serious); }
-.band-SATURATED { border-color: var(--status-critical); }
-/* Domains 2/4/5/6 (hybrid/infra/social/climate) share this tier naming. */
-.band-STRAINED .band-dot { background: var(--status-serious); }
-.band-STRAINED { border-color: var(--status-serious); }
-/* Dormant Hormuz bands — unused live, kept in case /api/export or a future
-   view ever renders them again. */
-.band-OPEN .band-dot { background: var(--status-good); }
-.band-RESTRICTED .band-dot { background: var(--status-warning); }
-.band-SEVERELY_DISRUPTED .band-dot { background: var(--status-serious); }
-.band-EFFECTIVELY_CLOSED .band-dot { background: var(--status-critical); }
-.band-OPEN { border-color: var(--status-good); }
-.band-RESTRICTED { border-color: var(--status-warning); }
-.band-SEVERELY_DISRUPTED { border-color: var(--status-serious); }
-.band-EFFECTIVELY_CLOSED { border-color: var(--status-critical); }
+/* v1 bands, shared by all six domains. The index measures deviation from a
+   domain's own normal, so 0 is the good end and the colour ramp runs the
+   opposite way to v0's "higher = calmer" scale. One vocabulary for every
+   domain, because a 60 now means the same thing wherever it appears. */
+.band-NORMAL  .band-dot { background: var(--status-good); }
+.band-NOTABLE .band-dot { background: var(--status-warning); }
+.band-HIGH    .band-dot { background: var(--status-serious); }
+.band-EXTREME .band-dot { background: var(--status-critical); }
+.band-NORMAL  { border-color: var(--status-good); }
+.band-NOTABLE { border-color: var(--status-warning); }
+.band-HIGH    { border-color: var(--status-serious); }
+.band-EXTREME { border-color: var(--status-critical); }
 
 .lang-toggle, .info-btn {
   background: none; border: 1px solid var(--border); color: var(--ink-2);
@@ -114,11 +121,23 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
 .domain-card:hover { border-color: var(--muted); }
 .domain-card-top { display: flex; align-items: center; justify-content: space-between; }
 .domain-num { font-size: 12px; color: var(--muted); }
-.domain-status { font-size: 11px; padding: 2px 8px; border-radius: 999px; }
-.domain-status-live { background: rgba(12, 163, 12, 0.15); color: var(--status-good); }
-.domain-status-scouted { background: rgba(137, 135, 129, 0.15); color: var(--muted); }
+/* The reading replaces v0's "Live" pill, which was identical on all six cards
+   and so carried no signal at all. Monospace because it is a numeric readout,
+   and border-coloured by band via the shared .band-* rules. */
+.domain-reading {
+  font-family: var(--font-mono); font-size: 11.5px; font-weight: 500;
+  padding: 2px 9px; border-radius: 999px;
+  border: 1px solid var(--border); color: var(--ink-2);
+}
+.domain-reading.band-none { color: var(--muted); }
 .domain-name { font-size: 15px; font-weight: 600; color: var(--ink); margin: 0; }
-.domain-summary { font-size: 13px; color: var(--muted); margin: 0; }
+/* What moved, in words — the line a reader can act on. */
+.domain-detail { font-size: 13px; color: var(--ink-2); margin: 0; }
+.domain-detail.is-suspect { color: var(--status-warning); }
+.domain-spark { height: 34px; margin: 2px 0; }
+/* The standing description of the domain. v0 destroyed this the moment an
+   index existed; it is context that never stops being useful. */
+.domain-summary { font-size: 12px; color: var(--muted); margin: 0; }
 
 #domain-view { display: flex; flex-direction: column; height: calc(100vh - 49px); }
 #domain-view[hidden] { display: none; }
@@ -219,16 +238,19 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
 .odds-chip { font-family: var(--font-mono); font-size: 24px; font-weight: 600; color: var(--ink); }
 
 .headlines { list-style: none; margin: 0; padding: 0; font-size: 13px; }
-.headlines li { padding: 6px 0; border-bottom: 1px solid var(--grid); }
+.headlines li { padding: 6px 8px; border-bottom: 1px solid var(--grid); }
 .headlines a { color: var(--ink-2); text-decoration: none; }
 .headlines a:hover { color: var(--ink); text-decoration: underline; }
 .headlines .src { color: var(--muted); font-size: 11px; display: block; margin-top: 2px; }
 
+/* One neutral rail, no colour claim — see headlineChip.ts for why the
+   per-source hash palette went away. The padding now comes from `.headlines
+   li` above, which is what the `!important` here used to be fighting. */
 .headline-chip {
-  border-left: 3px solid var(--chip-color, var(--muted));
-  padding-left: 8px !important;
-  background: color-mix(in srgb, var(--chip-color, var(--muted)) 6%, transparent);
+  border-left: 2px solid var(--grid);
+  border-radius: 0 var(--radius) var(--radius) 0;
 }
+.headline-chip:hover { border-left-color: var(--muted); background: rgba(255, 255, 255, 0.02); }
 
 .vt-chart { height: 90px; margin: 6px 0; }
 .mini-sparkline { height: 40px; margin-top: 4px; }
@@ -285,7 +307,6 @@ dialog p { font-size: 14px; line-height: 1.5; }
   padding: 16px;
 }
 #timeline-drawer { max-width: 1100px; margin: 0 auto; }
-#timeline-chart { width: 100%; height: 340px; }
 .drawer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 1100px; margin: 0 auto; }
 @media (max-width: 980px) { .drawer-grid { grid-template-columns: 1fr; } }
 .drawer h2 {
@@ -322,4 +343,21 @@ dialog p { font-size: 14px; line-height: 1.5; }
   #right { order: 2; border-left: none; }
   #timeline-chart { height: 360px; }
   .brand-sub { display: none; }
+}
+
+/* Map legend — built in JS by map.ts, styled here rather than through a
+   cssText string so it participates in the same token system as everything
+   else. The two colours come in as custom properties because map.ts resolves
+   them for the canvas layers anyway. */
+.map-legend {
+  position: absolute; bottom: 26px; left: 10px; z-index: 5;
+  background: color-mix(in srgb, var(--legend-bg) 85%, transparent);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 6px 10px; font-size: 11.5px; color: var(--legend-ink);
+}
+
+/* Deep-dive split view. v0 pinned this at `340px 1fr` with no breakpoint, so
+   five of six domain views never reflowed on a phone. */
+@media (max-width: 860px) {
+  .split-layout { grid-template-columns: 1fr; }
 }

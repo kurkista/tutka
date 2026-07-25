@@ -108,30 +108,68 @@ export const HPI = {
 };
 
 // ---------------------------------------------------------------------------
+// Shared v1 index vocabulary and tuning.
+//
+// v0 gave each domain its own band names (CALM/ELEVATED/ACTIVE/SATURATED vs
+// CALM/ELEVATED/HEIGHTENED/CRITICAL) because each index measured its own
+// domain-specific *level*. From v1 every index measures the same thing — how
+// far this domain has moved from its own recent normal — so it reads in one
+// shared vocabulary, and a 60 in one domain means what a 60 means in another.
+//
+// Direction is inverted from v0: **0 = normal, 100 = most unusual.**
+// ---------------------------------------------------------------------------
+export const DEVIATION_BANDS = [
+  { min: 75, name: 'EXTREME' },
+  { min: 50, name: 'HIGH' },
+  { min: 25, name: 'NOTABLE' },
+  { min: 0, name: 'NORMAL' },
+];
+
+// Tuning for indices/deviation.js. zSpan is the headline knob: how many
+// robust deviations from the trailing median count as "as unusual as we
+// score". Calibrated against 528 real gdelt_nordic_vol24h and 394
+// gdelt_nordic_tone observations over a calm fortnight — zSpan 3 put the
+// simulated index at median 9, p90 50, max 72, i.e. NORMAL 74% of the time
+// and never EXTREME during a genuinely uneventful window. zSpan 2 fired
+// EXTREME on 2.7% of a calm fortnight, which is too loose to be believed.
+export const DEVIATION = {
+  windowDays: 30,
+  zSpan: 3,
+  // Score the median of a window, not the newest single sample: vol24h is a
+  // 24h rolling sum resampled every ~30 min by the relay. 12h is chosen from
+  // the shape of the real series — day-to-day medians carry the signal (they
+  // ran 45→340 over the first fortnight, MAD 48), while within-day scatter is
+  // dominated by relay timing and truncated responses. A 3h window tracked
+  // that scatter; a 12h one tracks the day.
+  currentWindowMs: 12 * 3600_000,
+  // Floors that stop a freshly-added domain declaring anomalies against its
+  // own first afternoon. The relay writes ~48×/day, so these clear about
+  // three days after a domain goes live.
+  minSamples: 48,
+  minSpanMs: 3 * 24 * 3600_000,
+};
+
+// Monthly official statistics can never meet the sample floor above; they get
+// their own, in years rather than days.
+export const DEVIATION_MONTHLY = {
+  ...DEVIATION,
+  windowDays: 1460,
+  minSamples: 12,
+  minSpanMs: 365 * 24 * 3600_000,
+};
+
+// ---------------------------------------------------------------------------
 // Information Environment Index — domain 3 (disinformation/narrative
 // pressure around Finland/Baltic keywords). Second domain built after Hormuz;
 // see hpi.js/indices/infoenv.js and METHODOLOGY.md for the full rationale.
 // Deliberately just two honest signals, not forced into HPI's four-part shape.
 // ---------------------------------------------------------------------------
 export const INFOENV = {
-  version: 'infoenv-v0',
+  version: 'infoenv-v1',
   weights: { V: 0.6, T: 0.4 },
-  // Same direction convention as HPI: higher score = calmer. Band names are
-  // domain-appropriate, not reused from HPI's OPEN/RESTRICTED/... names.
-  bands: [
-    { min: 70, name: 'CALM' },
-    { min: 45, name: 'ELEVATED' },
-    { min: 20, name: 'ACTIVE' },
-    { min: 0, name: 'SATURATED' },
-  ],
+  bands: DEVIATION_BANDS,
   hysteresisPoints: 2,
-  // News volume: 24h GDELT article volume vs a calm-2025 median baseline,
-  // log10-scaled exactly like HPI's N component (10× the median → score 0).
-  newsLog10Span: 1,
-  // GDELT average tone is roughly 0 (neutral) down to about -10 (extreme
-  // negative coverage) in ordinary use; -8 is a genuinely alarmed 24h average.
-  toneCalm: 0,
-  toneExtreme: -8,
+  deviation: DEVIATION,
   stalenessMs: {
     V: 3 * 3600_000,
     T: 24 * 3600_000,
@@ -149,20 +187,11 @@ export const INFOENV = {
 // See indices/nordic.js and METHODOLOGY.md.
 // ---------------------------------------------------------------------------
 export const NORDIC = {
-  version: 'nordic-v0',
+  version: 'nordic-v1',
   weights: { V: 0.6, T: 0.4 },
-  // Higher score = calmer, same convention as HPI/INFOENV. Band names are
-  // domain-appropriate, not reused from either other domain's vocabulary.
-  bands: [
-    { min: 70, name: 'CALM' },
-    { min: 45, name: 'ELEVATED' },
-    { min: 20, name: 'HEIGHTENED' },
-    { min: 0, name: 'CRITICAL' },
-  ],
+  bands: DEVIATION_BANDS,
   hysteresisPoints: 2,
-  newsLog10Span: 1,
-  toneCalm: 0,
-  toneExtreme: -8,
+  deviation: DEVIATION,
   stalenessMs: {
     V: 3 * 3600_000,
     T: 24 * 3600_000,
@@ -184,18 +213,11 @@ export const NORDIC = {
 // See indices/infra.js and METHODOLOGY.md.
 // ---------------------------------------------------------------------------
 export const INFRA = {
-  version: 'infra-v0',
+  version: 'infra-v1',
   weights: { V: 0.6, T: 0.4 },
-  bands: [
-    { min: 70, name: 'CALM' },
-    { min: 45, name: 'ELEVATED' },
-    { min: 20, name: 'STRAINED' },
-    { min: 0, name: 'CRITICAL' },
-  ],
+  bands: DEVIATION_BANDS,
   hysteresisPoints: 2,
-  newsLog10Span: 1,
-  toneCalm: 0,
-  toneExtreme: -8,
+  deviation: DEVIATION,
   stalenessMs: {
     V: 3 * 3600_000,
     T: 24 * 3600_000,
@@ -220,26 +242,16 @@ export const INFRA = {
 // resolve. See indices/social.js and METHODOLOGY.md.
 // ---------------------------------------------------------------------------
 export const SOCIAL = {
-  version: 'social-v0',
+  version: 'social-v1',
   weights: { V: 0.4, T: 0.3, C: 0.3 },
-  bands: [
-    { min: 70, name: 'CALM' },
-    { min: 45, name: 'ELEVATED' },
-    { min: 20, name: 'STRAINED' },
-    { min: 0, name: 'CRITICAL' },
-  ],
+  bands: DEVIATION_BANDS,
   hysteresisPoints: 2,
-  newsLog10Span: 1,
-  toneCalm: 0,
-  toneExtreme: -8,
-  // StatFin's CCI_A1 balance figure has run roughly -12.5..-5.3 across
-  // 2025-2026 (checked live); historically Finnish consumer confidence has
-  // ranged wider (COVID-era lows near -20, good-year highs near +20). Using
-  // that wider span so the score isn't pinned near one edge by a short
-  // recent window — revisit once more of the real distribution is visible,
-  // same caveat as the other domains' draft GDELT queries.
-  confidenceMin: -20,
-  confidenceMax: 20,
+  deviation: DEVIATION,
+  // v0 scored C against a hand-picked -20..+20 span and flagged it as a
+  // placeholder. From v1 it is scored against the survey's own history like
+  // every other component, which retires the guess: CCI is monthly back to
+  // 1995M10, so DEVIATION_MONTHLY's four-year window is real data rather than
+  // an assumed range.
   stalenessMs: {
     V: 3 * 3600_000,
     T: 24 * 3600_000,
@@ -288,18 +300,11 @@ export const SOCIAL = {
 //     pointed to instead. See indices/hybrid.js and METHODOLOGY.md.
 // ---------------------------------------------------------------------------
 export const HYBRID = {
-  version: 'hybrid-v0',
+  version: 'hybrid-v1',
   weights: { V: 0.6, T: 0.4 },
-  bands: [
-    { min: 70, name: 'CALM' },
-    { min: 45, name: 'ELEVATED' },
-    { min: 20, name: 'STRAINED' },
-    { min: 0, name: 'CRITICAL' },
-  ],
+  bands: DEVIATION_BANDS,
   hysteresisPoints: 2,
-  newsLog10Span: 1,
-  toneCalm: 0,
-  toneExtreme: -8,
+  deviation: DEVIATION,
   stalenessMs: {
     V: 3 * 3600_000,
     T: 24 * 3600_000,
@@ -352,18 +357,17 @@ export const HYBRID = {
 // See indices/climate.js and METHODOLOGY.md.
 // ---------------------------------------------------------------------------
 export const CLIMATE = {
-  version: 'climate-v0',
+  version: 'climate-v1',
   weights: { V: 0.4, T: 0.3, F: 0.3 },
-  bands: [
-    { min: 70, name: 'CALM' },
-    { min: 45, name: 'ELEVATED' },
-    { min: 20, name: 'STRAINED' },
-    { min: 0, name: 'CRITICAL' },
-  ],
+  bands: DEVIATION_BANDS,
   hysteresisPoints: 2,
-  newsLog10Span: 1,
-  toneCalm: 0,
-  toneExtreme: -8,
+  // v0 scored F as `100 - 5·hotspotCount`, saturating at 0 from 20 hotspots
+  // up — and 20+ VIIRS detections over Finland and the Baltics is an ordinary
+  // northern-European July. That made domain 6 a season detector, and its
+  // ELEVATED reading (index landing on exactly 70.0, the band boundary) the
+  // only non-CALM signal anywhere on the site. Scoring the count against its
+  // own trailing 30 days compares July to July, which is the seasonal fix.
+  deviation: DEVIATION,
   stalenessMs: {
     V: 3 * 3600_000,
     T: 24 * 3600_000,

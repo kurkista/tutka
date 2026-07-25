@@ -7,14 +7,25 @@
 import type { AppState, DomainEvent } from '../types';
 import { t, getLang, fmtNum } from '../i18n';
 import { getSeries } from '../api';
-import { makeUnifiedTimeline, type UnifiedTimelineRow } from '../charts';
+import { makeUnifiedTimeline, SERIES, type UnifiedTimelineRow } from '../charts';
+import { onFirstView, trackChart } from '../lazyView';
 
-const METRICS: { metric: string; labelKey: string; color: string; scale?: (v: number) => number; fmt: (v: number) => string }[] = [
-  { metric: 'nordic_index', labelKey: 'timeline.nordicIndex', color: '#3987e5', fmt: (v) => fmtNum(v, 0) },
-  { metric: 'gdelt_nordic_vol24h', labelKey: 'timeline.news', color: '#ec835a', fmt: (v) => fmtNum(v, 0) },
-  { metric: 'gdelt_nordic_tone', labelKey: 'timeline.tone', color: '#c98500', fmt: (v) => fmtNum(v, 1) },
-  { metric: 'nordic_vessels_in_zone', labelKey: 'timeline.ships', color: '#9085e9', fmt: (v) => fmtNum(v, 0) },
-  { metric: 'flights_count', labelKey: 'timeline.flights', color: '#4fd1c5', fmt: (v) => fmtNum(v, 0) },
+const METRICS: {
+  metric: string; labelKey: string; color: string;
+  scale?: (v: number) => number; fmt: (v: number) => string;
+  /** Drop stored zeros as dropouts rather than plotting them as observations. */
+  zeroIsMissing?: boolean;
+}[] = [
+  { metric: 'nordic_index', labelKey: 'timeline.nordicIndex', color: SERIES[0], fmt: (v) => fmtNum(v, 0) },
+  // A 24h rolling article count cannot really drop to 0 and back within the
+  // hour; those are truncated GDELT responses (see storeGdeltVolume). Plotted
+  // raw they turned this series into a sawtooth that swamped everything else
+  // on the shared axis. Filtered here for the same reason the index filters
+  // them — a dropout is missing data, not a quiet news day.
+  { metric: 'gdelt_nordic_vol24h', labelKey: 'timeline.news', color: SERIES[1], fmt: (v) => fmtNum(v, 0), zeroIsMissing: true },
+  { metric: 'gdelt_nordic_tone', labelKey: 'timeline.tone', color: SERIES[2], fmt: (v) => fmtNum(v, 1) },
+  { metric: 'nordic_vessels_in_zone', labelKey: 'timeline.ships', color: SERIES[3], fmt: (v) => fmtNum(v, 0) },
+  { metric: 'flights_count', labelKey: 'timeline.flights', color: SERIES[4], fmt: (v) => fmtNum(v, 0) },
 ];
 
 let chart: ReturnType<typeof makeUnifiedTimeline> | null = null;
@@ -33,8 +44,10 @@ export async function init(state: AppState): Promise<void> {
     });
   }
 
-  window.addEventListener('resize', () => chart?.resize(), { passive: true });
-  await renderChart();
+  // Built on first visit to domain 1, not at boot: this chart is the reason
+  // the eager-init bug was visible in production — it was constructed while
+  // #domain-view was still hidden and measured the 100px ECharts fallback.
+  onFirstView('1', renderChart);
 }
 
 async function renderChart(): Promise<void> {
@@ -42,10 +55,12 @@ async function renderChart(): Promise<void> {
   const rows = await Promise.all(
     METRICS.map(async (m) => {
       const raw = await getSeries(m.metric, days).catch(() => []);
-      const points = m.scale ? raw.map(([ts, v]) => [ts, m.scale!(v)] as [number, number]) : raw;
+      const kept = m.zeroIsMissing ? raw.filter(([, v]) => v !== 0) : raw;
+      const points = m.scale ? kept.map(([ts, v]) => [ts, m.scale!(v)] as [number, number]) : kept;
       return { label: t(m.labelKey), color: m.color, points, fmt: m.fmt } satisfies UnifiedTimelineRow;
     }),
   );
   chart?.dispose();
   chart = makeUnifiedTimeline(el, rows, events, getLang());
+  trackChart('1', chart);
 }

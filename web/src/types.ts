@@ -19,9 +19,22 @@ export interface Aircraft {
   trk: number | null;
 }
 
+/** What server/indices/deviation.js puts in a v1 component's `raw`. */
+export interface DeviationRaw {
+  value: number;
+  samples: number;
+  baselineMedian: number;
+  baselineMad: number;
+  baselineN: number;
+  baselineDays: number;
+  z: number;
+  anomaly: 'high' | 'low' | 'normal';
+  direction: 'high' | 'low';
+}
+
 export interface IndexComponent {
   score: number;
-  raw: Record<string, unknown>;
+  raw: Partial<DeviationRaw> & Record<string, unknown>;
   ts: number;
 }
 

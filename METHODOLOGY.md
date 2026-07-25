@@ -1,6 +1,6 @@
 # How tutka computes its domain indices
 
-*Last updated 2026-07-10*
+*Last updated 2026-07-25*
 
 tutka watches several civic/geopolitical-risk domains (see
 [README.md](README.md) for the full taxonomy) and condenses each into one
@@ -13,9 +13,112 @@ feed in and how each one is scored — documented separately below.
 
 ---
 
+## How every component is scored (v1)
+
+**All six domains answer one question: how far is this domain from its own
+recent normal?** Not "what is the level" — the level turned out to be
+unanswerable with the data available, for a reason worth recording.
+
+### Why v0 was replaced
+
+v0 scored news volume against the median daily volume of calendar 2025:
+
+```
+V = 100 × (1 − clamp(log₁₀(max(vol/calm, 1)) / 1))
+```
+
+`max(vol/calm, 1)` is a one-sided rectifier. Any ratio at or below the calm
+baseline scores exactly 100 — and live ratios sat at 0.23–0.41 across all six
+domains, roughly 3–4× *below* the 2025 baseline, permanently. So V was not a
+variable; it was the constant 100. With `weights {V: 0.6, T: 0.4}` every
+two-component index reduced to:
+
+```
+index = 60 + 0.4 × T        (floor 60)
+```
+
+Leaving the CALM band (min 70) therefore required a GDELT **24-hour average**
+tone of −6 or worse. Daily average tone is a mean over hundreds of articles
+and sits between −1 and −3 in ordinary use; −6 does not occur. Domains 1–4
+were arithmetically incapable of reporting anything but CALM, and the
+observed history confirms it: over 1101 snapshots the Nordic index spanned
+67.3–93.7 (median 90.5), and hybrid moved 6.9 points in its entire life.
+
+Two further failures came from the same clamp. A degraded feed reads as calm
+— GDELT rate-limiting pushes volume *down*, further below the baseline, so V
+stays pinned at 100. And genuine unusual quiet is invisible, flattened into
+"perfectly normal".
+
+Domain 6 failed differently but as completely: `F = 100 − 5 × hotspotCount`
+saturates at 0 from 20 hotspots up, and 20+ VIIRS detections over Finland and
+the Baltics is an ordinary northern July. It was a season detector, and its
+ELEVATED reading — the index landing on exactly 70.0, the band boundary, held
+there by hysteresis — was the only non-CALM signal anywhere on the site.
+
+### What v1 does instead
+
+Every component — GDELT volume and tone, StatFin consumer confidence, FIRMS
+hotspot counts — is scored the same way, in `server/indices/deviation.js`:
+
+1. **Baseline:** the median and MAD (median absolute deviation) of that
+   metric's own trailing 30 days. Median and MAD rather than mean and standard
+   deviation, so one relay artifact or one news spike does not move the
+   yardstick it is being measured against.
+2. **Current reading:** the median of the last 12 hours, not the newest
+   sample. GDELT's `vol24h` is a 24-hour rolling sum resampled every ~30 min;
+   its within-day scatter is dominated by relay timing, while the real signal
+   is day-to-day.
+3. **Score:** `z = 0.6745 × (current − median) / MAD`, then
+   `100 × clamp(z_concerning / 3, 0, 1)`, where `z_concerning` flips sign for
+   components whose concerning direction is *down* (tone, consumer
+   confidence). The benign side scores 0 but is still **labelled**, which is
+   how "unusually quiet" stays visible instead of reading as calm.
+
+`zSpan = 3` was calibrated against 528 real `gdelt_nordic_vol24h` and 394
+`gdelt_nordic_tone` observations: replaying v1 over a genuinely calm fortnight
+gives a median of 5.5, p90 of 26.9, a maximum of 49.2, and NORMAL 90% of the
+time — never EXTREME during an uneventful window. `zSpan = 2` fired EXTREME on
+2.7% of that same calm fortnight, which is too loose to be believed.
+
+**Direction is inverted from v0: 0 = normal, 100 = most unusual.** v0 ran
+"higher = calmer", which made a headline reading of "Tension Index 89" mean
+*less* tension.
+
+**Bands** (shared by all six domains, because the number now means the same
+thing in each): < 25 **NORMAL** · 25–49 **NOTABLE** · 50–74 **HIGH** · ≥ 75
+**EXTREME**. A band change must clear the boundary by 2 points (hysteresis).
+
+### What v1 refuses to do
+
+A baseline needs at least 48 samples spanning at least 3 days, and a metric
+that is constant over the window has no spread to measure against. When
+either check fails the component is dropped; when nothing survives, the
+domain reports **no index at all** rather than a confident-looking zero. A
+freshly-added domain therefore reads "building baseline" for its first few
+days — which is true, and better than the alternative v0 chose.
+
+One consequence worth stating plainly: several domains' GDELT queries return
+single-digit daily article counts (climate's median was **1 article/day**).
+A constant series is unscoreable by design, so those domains will keep
+reporting null until their queries are widened. That is the honest reading of
+the data, not a bug in the scoring.
+
+### Dropout handling
+
+`storeGdeltVolume` used to store `0` whenever a 30-day timeline came back with
+no buckets in the last 24 h — GDELT's index lags, or a relay response is
+truncated. A 24-hour rolling sum dropping 546 → 0 → 546 within one day is not
+something news does; every day of the first fortnight contained such a drop.
+Those zeros are now refused at ingest (the job fails and surfaces as
+staleness), and scoring additionally treats a stored 0 in a GDELT volume
+series as a dropout rather than an observation, because ~15 days of history
+predates the ingest fix.
+
+---
+
 ## Domain 1 — State & military tension: the Nordic Tension Index
 
-*Version: **nordic-v0***
+*Version: **nordic-v1***
 
 Tracks Finland/Baltic-NATO-Russia military and security tension. No clean
 daily official series exists for this the way IMF PortWatch existed for
@@ -28,12 +131,14 @@ the real anchor — the same honest-two-component shape as domain 3.
 
 | | Component | Input | Normalization |
 |---|---|---|---|
-| **V** | News volume (60%) | GDELT 24 h article volume for `(Finland OR Baltic OR NATO) AND Russia AND (military OR troops OR incursion OR "air policing" OR "airspace violation" OR "border incident")` vs the median daily volume of calendar 2025 | `100 × (1 − clamp(log₁₀(vol/calm)))` — 10× calm-year volume scores 0. |
-| **T** | Tone stress (40%) | GDELT 24 h average tone for the same query | `100 × (1 − clamp((0 − tone) / 8))` — tone near 0 (neutral) scores ~100; an average tone of −8 or worse (genuinely alarmed 24h coverage) scores 0. |
+| **V** | News volume (60%) | GDELT 24 h article volume for `(Finland OR Baltic OR NATO) AND Russia AND (military OR troops OR incursion OR "air policing" OR "airspace violation" OR "border incident")` | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **up**. |
+| **T** | Tone stress (40%) | GDELT 24 h average tone for the same query | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **down**. |
 
-**Bands** (higher = calmer): ≥ 70 **CALM** · 45–69 **ELEVATED** · 20–44
-**HEIGHTENED** · < 20 **CRITICAL**. A band change must clear the boundary by
-2 points (hysteresis), so the label doesn't flap on noise.
+**Bands:** < 25 **NORMAL** · 25–49 **NOTABLE** · 50–74 **HIGH** · ≥ 75
+**EXTREME** — 0 is normal, 100 is most unusual, and the vocabulary is shared
+across all six domains because the number now means the same thing in each.
+A band change must clear the boundary by 2 points (hysteresis). See
+[How every component is scored (v1)](#how-every-component-is-scored-v1).
 
 **Staleness handling:** V drops after 3 h, T after 24 h (GDELT's tone
 timeline updates less frequently than volume). A stale component is dropped
@@ -77,6 +182,12 @@ dormant Hormuz appendix for why that logic is disabled rather than deleted.
 
 ### Changelog
 
+- **nordic-v1** (2026-07-25) — scoring replaced wholesale: every component is
+  now a two-sided robust deviation from its own trailing 30 days, and the
+  index reads 0 = normal / 100 = most unusual (v0 ran the other way).
+  v0's V component was pinned at a constant 100 because its ratio never rose
+  above the calm-2025 baseline; see
+  [How every component is scored (v1)](#how-every-component-is-scored-v1).
 - **nordic-v0** (2026-07-10) — first release, replacing Hormuz as domain 1's
   live content. V = GDELT log-ratio (Nordic/Baltic-Russia military-tension
   query) vs calm-2025 baseline; T = GDELT 24h average tone.
@@ -85,7 +196,7 @@ dormant Hormuz appendix for why that logic is disabled rather than deleted.
 
 ## Domain 3 — Information environment
 
-*Version: **infoenv-v0***
+*Version: **infoenv-v1***
 
 Tracks disinformation/influence-operation narrative pressure around
 Finland/Baltic keywords. Reuses the same GDELT mechanism as domain 1, with
@@ -97,12 +208,14 @@ its own query, its own series names, and its own two-component index.
 
 | | Component | Input | Normalization |
 |---|---|---|---|
-| **V** | News volume (60%) | GDELT 24 h article volume for `(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (disinformation OR propaganda OR "influence operation" OR "information operation")` vs the median daily volume of calendar 2025 | Same log10 formula as domain 1's V. |
-| **T** | Tone stress (40%) | GDELT 24 h average tone for the same query | Same formula as domain 1's T. |
+| **V** | News volume (60%) | GDELT 24 h article volume for `(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (disinformation OR propaganda OR "influence operation" OR "information operation")` | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **up**. |
+| **T** | Tone stress (40%) | GDELT 24 h average tone for the same query | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **down**. |
 
-**Bands:** ≥ 70 **CALM** · 45–69 **ELEVATED** · 20–44 **ACTIVE** · < 20
-**SATURATED** — different names from domain 1's, deliberately, since the two
-indices measure different things and shouldn't imply comparability.
+**Bands:** < 25 **NORMAL** · 25–49 **NOTABLE** · 50–74 **HIGH** · ≥ 75
+**EXTREME** — 0 is normal, 100 is most unusual, and the vocabulary is shared
+across all six domains because the number now means the same thing in each.
+A band change must clear the boundary by 2 points (hysteresis). See
+[How every component is scored (v1)](#how-every-component-is-scored-v1).
 
 **Staleness handling:** same as domain 1 (V: 3h, T: 24h).
 
@@ -125,6 +238,12 @@ stable programmatic channel.
 
 ### Changelog
 
+- **infoenv-v1** (2026-07-25) — scoring replaced wholesale: every component is
+  now a two-sided robust deviation from its own trailing 30 days, and the
+  index reads 0 = normal / 100 = most unusual (v0 ran the other way).
+  v0's V component was pinned at a constant 100 because its ratio never rose
+  above the calm-2025 baseline; see
+  [How every component is scored (v1)](#how-every-component-is-scored-v1).
 - **infoenv-v0** (2026-07-10) — first release. V = GDELT log-ratio (Baltic
   disinformation query) vs calm-2025 baseline; T = GDELT 24h average tone,
   scored 0 at tone ≤ −8.
@@ -133,7 +252,7 @@ stable programmatic channel.
 
 ## Domain 4 — Civic & critical infrastructure
 
-*Version: **infra-v0***
+*Version: **infra-v1***
 
 Tracks cyberattack/energy/water/telecom-disruption pressure around
 Finland/Baltic keywords. Same GDELT mechanism and two-component shape as
@@ -145,11 +264,14 @@ domains 1 and 3.
 
 | | Component | Input | Normalization |
 |---|---|---|---|
-| **V** | News volume (60%) | GDELT 24 h article volume for `(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (cyberattack OR "cyber attack" OR ransomware OR "power outage" OR blackout OR "grid failure" OR "critical infrastructure")` vs the median daily volume of calendar 2025 | Same log10 formula as domains 1/3. |
-| **T** | Tone stress (40%) | GDELT 24 h average tone for the same query | Same formula as domains 1/3. |
+| **V** | News volume (60%) | GDELT 24 h article volume for `(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (cyberattack OR "cyber attack" OR ransomware OR "power outage" OR blackout OR "grid failure" OR "critical infrastructure")` | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **up**. |
+| **T** | Tone stress (40%) | GDELT 24 h average tone for the same query | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **down**. |
 
-**Bands:** ≥ 70 **CALM** · 45–69 **ELEVATED** · 20–44 **STRAINED** · < 20
-**CRITICAL**.
+**Bands:** < 25 **NORMAL** · 25–49 **NOTABLE** · 50–74 **HIGH** · ≥ 75
+**EXTREME** — 0 is normal, 100 is most unusual, and the vocabulary is shared
+across all six domains because the number now means the same thing in each.
+A band change must clear the boundary by 2 points (hysteresis). See
+[How every component is scored (v1)](#how-every-component-is-scored-v1).
 
 **Staleness handling:** same as domains 1/3 (V: 3h, T: 24h).
 
@@ -176,6 +298,12 @@ locally; still needs `fly secrets set FINGRID_API_KEY` to go live.
 
 ### Changelog
 
+- **infra-v1** (2026-07-25) — scoring replaced wholesale: every component is
+  now a two-sided robust deviation from its own trailing 30 days, and the
+  index reads 0 = normal / 100 = most unusual (v0 ran the other way).
+  v0's V component was pinned at a constant 100 because its ratio never rose
+  above the calm-2025 baseline; see
+  [How every component is scored (v1)](#how-every-component-is-scored-v1).
 - **infra-v0** (2026-07-24) — first release. V/T = same GDELT shape as
   domains 1/3; NCSC-FI/EUVD/CERT-EU wired as shown-not-scored advisories;
   Fingrid polled, not yet scored.
@@ -184,7 +312,7 @@ locally; still needs `fly secrets set FINGRID_API_KEY` to go live.
 
 ## Domain 5 — Social stability
 
-*Version: **social-v0***
+*Version: **social-v1***
 
 Tracks polarization/unrest pressure around Finland/Baltic keywords, combined
 with Statistics Finland's monthly household-confidence survey — the first
@@ -197,19 +325,28 @@ statistic scored directly into the index, rather than shown alongside it.
 
 | | Component | Input | Normalization |
 |---|---|---|---|
-| **V** | News volume (40%) | GDELT 24 h article volume for `(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (protest OR unrest OR riot OR strike OR "civil unrest" OR polarization OR "social unrest")` vs the median daily volume of calendar 2025 | Same log10 formula as domains 1/3/4. |
-| **T** | Tone stress (30%) | GDELT 24 h average tone for the same query | Same formula as domains 1/3/4. |
-| **C** | Consumer confidence (30%) | Statistics Finland's Consumer Confidence Indicator (StatFin PxWeb table `kbar/11cc`, series `CCI_A1 = (B1+B2+B4+E1)/4`), a monthly balance-figure household survey | `100 × clamp((confidence − (−20)) / (20 − (−20)))` — confidence ≤ −20 scores 0, ≥ +20 scores 100. |
+| **V** | News volume (40%) | GDELT 24 h article volume for `(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (protest OR unrest OR riot OR strike OR "civil unrest" OR polarization OR "social unrest")` | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **up**. |
+| **T** | Tone stress (30%) | GDELT 24 h average tone for the same query | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **down**. |
+| **C** | Consumer confidence (30%) | Statistics Finland's Consumer Confidence Indicator (StatFin PxWeb table `kbar/11cc`, series `CCI_A1 = (B1+B2+B4+E1)/4`), a monthly balance-figure household survey | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **down**. |
 
-**Bands:** ≥ 70 **CALM** · 45–69 **ELEVATED** · 20–44 **STRAINED** · < 20
-**CRITICAL** — same names as domain 4, deliberately, since both share the
-"attention + mood" shape.
+**Bands:** < 25 **NORMAL** · 25–49 **NOTABLE** · 50–74 **HIGH** · ≥ 75
+**EXTREME** — 0 is normal, 100 is most unusual, and the vocabulary is shared
+across all six domains because the number now means the same thing in each.
+A band change must clear the boundary by 2 points (hysteresis). See
+[How every component is scored (v1)](#how-every-component-is-scored-v1).
 
 **Staleness handling:** V: 3h, T: 24h, C: 45 days (C is a monthly survey;
 the extra slack absorbs StatFin's normal publication lag without the index
 going stale between releases).
 
-### Component C's normalization span is a placeholder
+### Component C's normalization span was a placeholder *(resolved in v1)*
+
+v0 mapped the StatFin confidence balance onto a hand-picked −20..+20 span.
+v1 scores it against its own monthly history (CCI_A1 runs back to 1995M10),
+so the range comes from the data rather than an estimate. The note below
+records what v0 assumed and why.
+
+
 
 `confidenceMin`/`confidenceMax` (−20/+20) are a reasonable-looking span based
 on general knowledge of Finnish consumer-confidence history (COVID-era lows
@@ -247,6 +384,14 @@ query wording above.
 
 ### Changelog
 
+- **social-v1** (2026-07-25) — scoring replaced wholesale: every component is
+  now a two-sided robust deviation from its own trailing 30 days, and the
+  index reads 0 = normal / 100 = most unusual (v0 ran the other way). C (StatFin consumer confidence) is scored against its own
+  monthly history back to 1995 instead of the hand-picked −20..+20 span v0
+  flagged as a placeholder.
+  v0's V component was pinned at a constant 100 because its ratio never rose
+  above the calm-2025 baseline; see
+  [How every component is scored (v1)](#how-every-component-is-scored-v1).
 - **social-v0** (2026-07-25) — first release. V = GDELT log-ratio (Baltic
   protest/unrest query) vs calm-2025 baseline; T = GDELT 24h average tone;
   C = StatFin monthly consumer-confidence balance figure, placeholder
@@ -256,7 +401,7 @@ query wording above.
 
 ## Domain 2 — Hybrid & grey-zone threats
 
-*Version: **hybrid-v0***
+*Version: **hybrid-v1***
 
 Tracks GPS/GNSS jamming, undersea cable/pipeline sabotage, drone-incursion,
 and instrumentalized-migration pressure around Finland/Baltic keywords. Same
@@ -270,11 +415,14 @@ Confidence Indicator; see "Sources evaluated and rejected" below for why.
 
 | | Component | Input | Normalization |
 |---|---|---|---|
-| **V** | News volume (60%) | GDELT 24 h article volume for `(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (jamming OR GPS OR GNSS OR spoofing OR "undersea cable" OR pipeline OR sabotage OR drone OR incursion OR "border crossing" OR migrant)` vs the median daily volume of calendar 2025 | Same log10 formula as domains 1/3/4/5. |
-| **T** | Tone stress (40%) | GDELT 24 h average tone for the same query | Same formula as domains 1/3/4/5. |
+| **V** | News volume (60%) | GDELT 24 h article volume for `(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (jamming OR GPS OR GNSS OR spoofing OR "undersea cable" OR pipeline OR sabotage OR drone OR incursion OR "border crossing" OR migrant)` | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **up**. |
+| **T** | Tone stress (40%) | GDELT 24 h average tone for the same query | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **down**. |
 
-**Bands:** ≥ 70 **CALM** · 45–69 **ELEVATED** · 20–44 **STRAINED** · < 20
-**CRITICAL** — same names as domain 4.
+**Bands:** < 25 **NORMAL** · 25–49 **NOTABLE** · 50–74 **HIGH** · ≥ 75
+**EXTREME** — 0 is normal, 100 is most unusual, and the vocabulary is shared
+across all six domains because the number now means the same thing in each.
+A band change must clear the boundary by 2 points (hysteresis). See
+[How every component is scored (v1)](#how-every-component-is-scored-v1).
 
 **Staleness handling:** same as domains 1/3/4 (V: 3h, T: 24h).
 
@@ -354,6 +502,12 @@ genuinely differentiated signal available, scoped there as future work.
 
 ### Changelog
 
+- **hybrid-v1** (2026-07-25) — scoring replaced wholesale: every component is
+  now a two-sided robust deviation from its own trailing 30 days, and the
+  index reads 0 = normal / 100 = most unusual (v0 ran the other way).
+  v0's V component was pinned at a constant 100 because its ratio never rose
+  above the calm-2025 baseline; see
+  [How every component is scored (v1)](#how-every-component-is-scored-v1).
 - **hybrid-v0** (2026-07-25) — first release. V/T = same GDELT shape as
   domains 1/3/4/5; Rajavartiolaitos press RSS wired as a keyword-filtered,
   shown-not-scored advisory feed. No third scored component, unlike
@@ -364,7 +518,7 @@ genuinely differentiated signal available, scoped there as future work.
 
 ## Domain 6 — Environmental & climate security
 
-*Version: **climate-v0***
+*Version: **climate-v1***
 
 Tracks wildfire/drought/extreme-weather pressure around Finland/Baltic
 keywords, combined with NASA FIRMS's active-fire hotspot count — like domain
@@ -379,25 +533,34 @@ below).
 
 | | Component | Input | Normalization |
 |---|---|---|---|
-| **V** | News volume (40%) | GDELT 24 h article volume for `(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (wildfire OR "forest fire" OR drought OR heatwave OR flooding OR "storm damage" OR "extreme weather" OR "grid resilience")` vs the median daily volume of calendar 2025 | Same log10 formula as domains 1/3/4/5/2. |
-| **T** | Tone stress (30%) | GDELT 24 h average tone for the same query | Same formula as domains 1/3/4/5/2. |
-| **F** | Active-fire pressure (30%) | NASA FIRMS Area API — VIIRS active-fire/hotspot detections within a Finland + Baltic-states bounding box (20°E–32°E, 53°N–70.5°N), 1-day window | `100 − clamp(hotspotCount × 5, 0, 100)` — 0 hotspots scores 100, 20+ scores 0. Placeholder scale, see below. |
+| **V** | News volume (40%) | GDELT 24 h article volume for `(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (wildfire OR "forest fire" OR drought OR heatwave OR flooding OR "storm damage" OR "extreme weather" OR "grid resilience")` | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **up**. |
+| **T** | Tone stress (30%) | GDELT 24 h average tone for the same query | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **down**. |
+| **F** | Active-fire pressure (30%) | NASA FIRMS Area API — VIIRS active-fire/hotspot detections within a Finland + Baltic-states bounding box (20°E–32°E, 53°N–70.5°N), 1-day window | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **up**. |
 
-**Bands:** ≥ 70 **CALM** · 45–69 **ELEVATED** · 20–44 **STRAINED** · < 20
-**CRITICAL** — same names as domains 2/4/5.
+**Bands:** < 25 **NORMAL** · 25–49 **NOTABLE** · 50–74 **HIGH** · ≥ 75
+**EXTREME** — 0 is normal, 100 is most unusual, and the vocabulary is shared
+across all six domains because the number now means the same thing in each.
+A band change must clear the boundary by 2 points (hysteresis). See
+[How every component is scored (v1)](#how-every-component-is-scored-v1).
 
 **Staleness handling:** V: 3h, T: 24h, F: 24h (FIRMS's NRT products are
 typically <1h latency, but a full day's slack absorbs pass gaps for a
 1-day-window bounding-box query).
 
-### Component F's normalization scale is a placeholder
+### Component F no longer uses a hand-picked scale *(resolved in v1)*
 
-`scorePerHotspot = 5` (in `FIRMS` config, `server/config.js`) is a
-reasonable-looking starting scale, not a fitted calibration — Finland/Baltic
-wildfire activity is low most of the year, so the index will mostly read
-F ≈ 100 (zero hotspots) outside dry summer periods. Revisit the scale once
-the poller has run through at least one real fire season, same caveat as
-domain 5's confidence-span placeholder.
+v0 scored F as `100 − 5 × hotspotCount`, which the config itself flagged as a
+placeholder. It was worse than unfitted: it saturated at 0 from 20 hotspots
+up, and 20+ VIIRS detections over Finland and the Baltics is an ordinary
+northern July. Domain 6 was measuring the season, and the resulting ELEVATED
+reading was the only non-CALM signal anywhere on the site.
+
+v1 scores the hotspot count against its own trailing 30 days like every other
+component, which compares July to July and needs no hand-picked scale. The
+remaining caveat is smaller and different in kind: a trailing 30-day window
+adapts to seasonal drift but cannot yet see *year-over-year* anomalies. Once
+the poller has a full fire season of history, a day-of-year baseline
+(this week vs the same week in prior years) would be strictly better.
 
 ### F requires a free API key to activate
 
@@ -482,6 +645,14 @@ follow-up.
 
 ### Changelog
 
+- **climate-v1** (2026-07-25) — scoring replaced wholesale: every component is
+  now a two-sided robust deviation from its own trailing 30 days, and the
+  index reads 0 = normal / 100 = most unusual (v0 ran the other way). F (FIRMS hotspots) drops the `100 − 5×count` linear falloff,
+  which saturated at 0 from 20 hotspots up and made the domain a season
+  detector; a trailing 30-day baseline compares July to July.
+  v0's V component was pinned at a constant 100 because its ratio never rose
+  above the calm-2025 baseline; see
+  [How every component is scored (v1)](#how-every-component-is-scored-v1).
 - **climate-v0** (2026-07-26) — first release. V/T = same GDELT shape as
   domains 1/2/3/4/5; F = NASA FIRMS active-fire hotspot count, placeholder
   linear-falloff scoring; Meteoalarm's four country Atom feeds wired as a
@@ -510,7 +681,7 @@ insurance and convoy requirements kept most commercial traffic away.
 | | Component | Input | Normalization |
 |---|---|---|---|
 | **T** | Transit flow (45%) | [IMF PortWatch](https://portwatch.imf.org/pages/cb5856222a5b4105adc6ee7e880a1730) daily transit calls for the Strait of Hormuz (chokepoint6), 7-day moving average | `clamp(7dma / 91.5) × 100`. Baseline 91.5 = PortWatch 2025 full-year average, queried 2026-07-09. |
-| **N** | News pressure (20%) | GDELT 24 h article volume for `"strait of hormuz"` vs the median daily volume of calendar 2025 | `100 × (1 − clamp(log₁₀(vol/calm)))`. |
+| **N** | News pressure (20%) | GDELT 24 h article volume for `"strait of hormuz"` | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **up**. |
 | **P** | Market odds (20%) | [Polymarket](https://polymarket.com) "Strait of Hormuz traffic returns to normal by Jul 31" | `p(normal) × 100`. |
 | **O** | Oil stress (15%) | Brent 20-day realized volatility, annualized (Yahoo Finance, FRED fallback) | `100 × (1 − clamp((σ − 0.30) / 0.70))`. |
 

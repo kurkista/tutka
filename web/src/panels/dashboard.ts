@@ -1,80 +1,116 @@
-// panels/dashboard.ts — home view: a synthesis strip (honest about partial
-// coverage, never a fabricated combined score) and six clickable domain-block
-// cards. Clicking a card navigates via location.hash — see main.ts's router.
-import type { AppState } from '../types';
+// panels/dashboard.ts — home view. Answers "what is unusual right now",
+// which is a question that still has a real answer on a quiet day; v0 asked
+// "what is the level" and, because every index was pinned at its ceiling,
+// could only ever answer CALM six times in identical grey.
+//
+// Two deliberate changes from v0's card:
+//   - the descriptive blurb is *kept*. v0 overwrote it with the band word as
+//     soon as an index existed, so the landing page got less informative the
+//     moment data arrived.
+//   - the score the backend computes is actually shown, with a 30-day
+//     sparkline and a plain sentence naming what moved.
+import type { AppState, IndexSnapshot } from '../types';
 import { t } from '../i18n';
+import { getSeries } from '../api';
+import { makeSimpleSparkline } from '../charts';
+import { readingFor, readingLabel, type Reading } from '../reading';
 
 interface DomainMeta {
   n: number;
   nameKey: string;
   summaryKey: string;
-  live: boolean;
+  /** AppState.modules key and the `<name>_index` series prefix. */
+  moduleKey: 'nordic' | 'infoenv' | 'infra' | 'social' | 'hybrid' | 'climate';
 }
 
 const DOMAINS: DomainMeta[] = [
-  { n: 1, nameKey: 'domain.1.name', summaryKey: 'domain.1.summary', live: true },
-  { n: 2, nameKey: 'domain.2.name', summaryKey: 'domain.2.summary', live: true },
-  { n: 3, nameKey: 'domain.3.name', summaryKey: 'domain.3.summary', live: true },
-  { n: 4, nameKey: 'domain.4.name', summaryKey: 'domain.4.summary', live: true },
-  { n: 5, nameKey: 'domain.5.name', summaryKey: 'domain.5.summary', live: true },
-  { n: 6, nameKey: 'domain.6.name', summaryKey: 'domain.6.summary', live: true },
+  { n: 1, nameKey: 'domain.1.name', summaryKey: 'domain.1.summary', moduleKey: 'nordic' },
+  { n: 2, nameKey: 'domain.2.name', summaryKey: 'domain.2.summary', moduleKey: 'hybrid' },
+  { n: 3, nameKey: 'domain.3.name', summaryKey: 'domain.3.summary', moduleKey: 'infoenv' },
+  { n: 4, nameKey: 'domain.4.name', summaryKey: 'domain.4.summary', moduleKey: 'infra' },
+  { n: 5, nameKey: 'domain.5.name', summaryKey: 'domain.5.summary', moduleKey: 'social' },
+  { n: 6, nameKey: 'domain.6.name', summaryKey: 'domain.6.summary', moduleKey: 'climate' },
 ];
 
-/** Maps a domain number to its AppState.modules key, for domains 2/4/5/6
- * which share the generic {index, headlines, advisories?} shape. */
-const MODULE_KEY: Record<number, 'infra' | 'social' | 'hybrid' | 'climate'> = {
-  2: 'hybrid', 4: 'infra', 5: 'social', 6: 'climate',
-};
-
 export function init(state: AppState): void {
-  renderSynthesis(state);
-  renderCards(state);
+  const rows = DOMAINS.map((d) => {
+    const index = state.modules[d.moduleKey].index as IndexSnapshot | null;
+    return { meta: d, index, reading: readingFor(index) };
+  });
+
+  renderSynthesis(rows);
+  renderCards(rows);
+  // Sparklines are a bonus on top of a card that already reads correctly, so
+  // they load after first paint rather than blocking it.
+  void loadSparklines(rows);
 }
 
-function renderSynthesis(state: AppState): void {
-  const liveCount = DOMAINS.filter((d) => d.live).length;
+type Row = { meta: DomainMeta; index: IndexSnapshot | null; reading: Reading };
+
+function renderSynthesis(rows: Row[]): void {
+  const title = document.getElementById('synthesis-title')!;
+  const el = document.getElementById('synthesis-coverage')!;
+
+  const reporting = rows.filter((r) => r.index);
+  const building = rows.length - reporting.length;
+  // Rank by score so the lead is whichever domain is furthest from its own
+  // normal — the ordering the page's question implies.
+  const ranked = [...reporting].sort((a, b) => (b.index!.value) - (a.index!.value));
+  const lead = ranked[0];
+
   const parts: string[] = [];
-  const nordic = state.modules.nordic.index;
-  const infoenv = state.modules.infoenv.index;
-  if (nordic) parts.push(`${t('domain.1.name')}: ${t('band.' + nordic.band)}`);
-  if (infoenv) parts.push(`${t('domain.3.name')}: ${t('band.' + infoenv.band)}`);
-  for (const n of [2, 4, 5, 6] as const) {
-    const idx = state.modules[MODULE_KEY[n]].index;
-    if (idx) parts.push(`${t(`domain.${n}.name`)}: ${t('band.' + idx.band)}`);
+
+  if (lead && lead.index!.band !== 'NORMAL') {
+    title.textContent = t('dashboard.leadUnusual');
+    parts.push(`${t(lead.meta.nameKey)} — ${readingLabel(lead.reading)}. ${lead.reading.detail}.`);
+  } else {
+    title.textContent = t('dashboard.leadCalm');
+    parts.push(t('dashboard.calmBody', { n: reporting.length }));
   }
 
-  const el = document.getElementById('synthesis-coverage')!;
-  el.textContent = t('dashboard.coverage', { n: liveCount, total: DOMAINS.length }) +
-    (parts.length ? ' — ' + parts.join(' · ') : '');
+  if (building > 0) parts.push(t('dashboard.building', { n: building }));
+  parts.push(t('dashboard.baselineNote'));
+
+  // Each part is a standalone sentence; some already end in punctuation
+  // (the lead ends with the driver clause), so only add a stop where one is
+  // missing rather than emitting "…a baseline Each domain is…".
+  el.textContent = parts.map((s) => (/[.!?]$/.test(s) ? s : `${s}.`)).join(' ');
 }
 
-function renderCards(state: AppState): void {
+function renderCards(rows: Row[]): void {
   const grid = document.getElementById('domain-cards')!;
   grid.innerHTML = '';
-  for (const d of DOMAINS) {
+
+  for (const row of rows) {
+    const { meta, index, reading } = row;
     const btn = document.createElement('button');
     btn.className = 'domain-card';
-    btn.dataset.domain = String(d.n);
+    btn.dataset.domain = String(meta.n);
 
-    let summary = t(d.summaryKey);
-    if (d.n === 1 && state.modules.nordic.index) summary = t('band.' + state.modules.nordic.index.band);
-    if (d.n === 3 && state.modules.infoenv.index) summary = t('band.' + state.modules.infoenv.index.band);
-    const moduleKey = MODULE_KEY[d.n];
-    if (moduleKey) {
-      const idx = state.modules[moduleKey].index;
-      if (idx) summary = t('band.' + idx.band);
-    }
-
-    const statusLabel = d.live ? t('domain.status.live') : t('domain.status.scouted');
+    const bandClass = index ? `band-${index.band}` : 'band-none';
     btn.innerHTML = `
       <div class="domain-card-top">
-        <span class="domain-num">${t('dashboard.domainLabel', { n: d.n })}</span>
-        <span class="domain-status domain-status-${d.live ? 'live' : 'scouted'}">${statusLabel}</span>
+        <span class="domain-num">${t('dashboard.domainLabel', { n: meta.n })}</span>
+        <span class="domain-reading ${bandClass}">${readingLabel(reading)}</span>
       </div>
-      <p class="domain-name">${t(d.nameKey)}</p>
-      <p class="domain-summary">${summary}</p>
+      <p class="domain-name">${t(meta.nameKey)}</p>
+      <p class="domain-detail${reading.suspectFeed ? ' is-suspect' : ''}">${reading.detail}</p>
+      <div class="domain-spark" data-spark="${meta.moduleKey}"></div>
+      <p class="domain-summary">${t(meta.summaryKey)}</p>
     `;
-    btn.addEventListener('click', () => { location.hash = `#domain/${d.n}`; });
+    btn.addEventListener('click', () => { location.hash = `#domain/${meta.n}`; });
     grid.appendChild(btn);
   }
+}
+
+async function loadSparklines(rows: Row[]): Promise<void> {
+  await Promise.all(rows.map(async (row) => {
+    const el = document.querySelector<HTMLElement>(`[data-spark="${row.meta.moduleKey}"]`);
+    if (!el) return;
+    const data = await getSeries(`${row.meta.moduleKey}_index`, 30).catch(() => []);
+    // Two points draw a meaningless straight line; leave the slot empty
+    // rather than implying a trend that isn't there.
+    if (data.length < 3) { el.remove(); return; }
+    makeSimpleSparkline(el, data);
+  }));
 }
