@@ -205,6 +205,51 @@ export const INFRA = {
 };
 
 // ---------------------------------------------------------------------------
+// Social stability Index — domain 5 (polarization, public trust, unrest).
+// Same GDELT V/T shape as NORDIC/INFOENV/INFRA, plus a third, genuinely
+// independent official signal: Statistics Finland's monthly Consumer
+// Confidence Indicator (see STATFIN.confidenceUrl and pollers/confidence.js)
+// — a real household-mood survey, not a news-attention proxy. Verified
+// 2026-07-25: StatFin's kbar/11cc table returns real json-stat2 data back to
+// 1995M10, series CCI_A1 = "Consumer confidence indicator, CCI =
+// (B1+B2+B4+E1)/4". Eurobarometer and Eurofound's EQLS were evaluated and
+// rejected as *feeds*: both publish only downloadable survey-wave dumps
+// (SPSS/CSV via GESIS), semi-annual/multi-year cadence, no queryable API —
+// GESIS's own archive 403'd a plain fetch. Findikaattori.fi (the other
+// obvious candidate) is confirmed dead — discontinued 2022, DNS doesn't even
+// resolve. See indices/social.js and METHODOLOGY.md.
+// ---------------------------------------------------------------------------
+export const SOCIAL = {
+  version: 'social-v0',
+  weights: { V: 0.4, T: 0.3, C: 0.3 },
+  bands: [
+    { min: 70, name: 'CALM' },
+    { min: 45, name: 'ELEVATED' },
+    { min: 20, name: 'STRAINED' },
+    { min: 0, name: 'CRITICAL' },
+  ],
+  hysteresisPoints: 2,
+  newsLog10Span: 1,
+  toneCalm: 0,
+  toneExtreme: -8,
+  // StatFin's CCI_A1 balance figure has run roughly -12.5..-5.3 across
+  // 2025-2026 (checked live); historically Finnish consumer confidence has
+  // ranged wider (COVID-era lows near -20, good-year highs near +20). Using
+  // that wider span so the score isn't pinned near one edge by a short
+  // recent window — revisit once more of the real distribution is visible,
+  // same caveat as the other domains' draft GDELT queries.
+  confidenceMin: -20,
+  confidenceMax: 20,
+  stalenessMs: {
+    V: 3 * 3600_000,
+    T: 24 * 3600_000,
+    C: 45 * 24 * 3600_000, // monthly survey; allow a bit over a month's slack
+  },
+  recomputeMs: 5 * 60_000,
+  snapshotMs: 15 * 60_000,
+};
+
+// ---------------------------------------------------------------------------
 // NCSC-FI (Kyberturvallisuuskeskus) public warnings RSS — domain 4's second,
 // independent (non-GDELT) source. Confirmed live 2026-07-24:
 // https://www.kyberturvallisuuskeskus.fi/feed/rss/fi/401 returns HTTP 200,
@@ -347,6 +392,17 @@ export const GDELT = {
       calmStart: '20250101000000',
       calmEnd: '20251231235959',
     },
+    // Domain 5's GDELT half — see SOCIAL/STATFIN above for the rest of the
+    // domain. Query is a draft, same retune-once-real-volume caveat as
+    // nordic/infra above.
+    social: {
+      module: 'social',
+      query: '(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (protest OR unrest OR riot OR strike OR "civil unrest" OR polarization OR "social unrest")',
+      seriesPrefix: 'gdelt_social_',
+      pollMs: 30 * 60_000,
+      calmStart: '20250101000000',
+      calmEnd: '20251231235959',
+    },
   },
 };
 
@@ -386,8 +442,11 @@ export const STATFIN = {
   // Statistics Finland PxWeb API (free, no key).
   // 11xx = average prices of liquid fuels, monthly, €/L, 2002M01→
   // 122p = annual change of the Consumer Price Index, monthly.
+  // kbar/11cc = Consumer Confidence balance figures, monthly, 1995M10→ —
+  // domain 5's C component (see SOCIAL above and pollers/confidence.js).
   fuelUrl: 'https://statfin.stat.fi/PxWeb/api/v1/en/StatFin/khi/11xx.px',
   cpiUrl: 'https://statfin.stat.fi/PxWeb/api/v1/en/StatFin/khi/122p.px',
+  confidenceUrl: 'https://statfin.stat.fi/PxWeb/api/v1/en/StatFin/kbar/11cc.px',
   fuelCodes: { pump_e95: '0700200', pump_diesel: '0700100', pump_heatoil: '0400500' },
   pollMs: 24 * 3600_000, // data changes monthly; a daily check is plenty
 };
@@ -465,6 +524,16 @@ export const PUBLIC_METRICS = [
   'gdelt_infoenv_median30d',
   'gdelt_infoenv_tone',
   'infoenv_index',
+  // Domain 4 (Civic & critical infrastructure) and domain 5 (Social stability).
+  'gdelt_infra_vol24h',
+  'gdelt_infra_median30d',
+  'gdelt_infra_tone',
+  'infra_index',
+  'gdelt_social_vol24h',
+  'gdelt_social_median30d',
+  'gdelt_social_tone',
+  'social_index',
+  'social_consumer_confidence',
   'nordic_vessels_in_zone',
   'nordic_unique_large_24h',
   'flights_count',

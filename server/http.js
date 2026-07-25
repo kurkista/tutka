@@ -20,6 +20,8 @@ import { storeGdeltPayload } from './pollers/gdelt.js';
 import { gatherAndCompute } from './hpi.js';
 import { gatherAndComputeNordic } from './indices/nordic.js';
 import { gatherAndComputeInfoEnv } from './indices/infoenv.js';
+import { gatherAndComputeInfra } from './indices/infra.js';
+import { gatherAndComputeSocial } from './indices/social.js';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 /** @type {{hormuz: any[], nordic: any[], infoenv: any[]}} */
@@ -57,7 +59,7 @@ export function startHttp({ store }) {
     for (const res of clients) res.write(': ping\n\n');
   }, SSE.pingMs).unref?.();
 
-  for (const event of ['vessels', 'transit', 'nordic_index', 'infoenv_index', 'metric', 'headline', 'flights']) {
+  for (const event of ['vessels', 'transit', 'nordic_index', 'infoenv_index', 'infra_index', 'social_index', 'metric', 'headline', 'flights']) {
     bus.on(event, (data) => broadcast(event, data));
   }
 
@@ -110,6 +112,15 @@ export function startHttp({ store }) {
           headlines: recentHeadlines(20, 'infoenv'),
           events: events.infoenv,
         },
+        infra: {
+          index: latestIndexSnapshot('infra') ?? null,
+          headlines: recentHeadlines(20, 'infra'),
+          advisories: recentHeadlines(20, 'infra_advisory'),
+        },
+        social: {
+          index: latestIndexSnapshot('social') ?? null,
+          headlines: recentHeadlines(20, 'social'),
+        },
       },
     });
   });
@@ -161,6 +172,8 @@ export function startHttp({ store }) {
       if (cfg.module === 'hormuz') gatherAndCompute(); // dormant, kept functional
       if (cfg.module === 'nordic') gatherAndComputeNordic();
       if (cfg.module === 'infoenv') gatherAndComputeInfoEnv();
+      if (cfg.module === 'infra') gatherAndComputeInfra();
+      if (cfg.module === 'social') gatherAndComputeSocial();
       console.log(`[ingest] gdelt relay (${cfg.module}) stored: ${stored.join(', ')}`);
       res.json({ ok: true, stored });
     } catch (err) {

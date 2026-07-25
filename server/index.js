@@ -3,7 +3,7 @@
 try { process.loadEnvFile(); } catch { /* no .env — fine in production */ }
 
 import {
-  DB_PATH, VESSELS, INFOENV, NORDIC, INFRA, GDELT,
+  DB_PATH, VESSELS, INFOENV, NORDIC, INFRA, SOCIAL, GDELT,
   ELECTRICITY, STATFIN, STOCKS, FX, OPENSKY, NCSCFI, EUVD, CERTEU, FINGRID,
 } from './config.js';
 import { openDb, putTransit, prune, transitsSince, upsertVesselsDaily, putSeries } from './db.js';
@@ -15,10 +15,12 @@ import { bus } from './bus.js';
 import { gatherAndComputeNordic } from './indices/nordic.js';
 import { gatherAndComputeInfoEnv } from './indices/infoenv.js';
 import { gatherAndComputeInfra } from './indices/infra.js';
+import { gatherAndComputeSocial } from './indices/social.js';
 import { pollGdelt } from './pollers/gdelt.js';
 import { pollElectricity } from './pollers/electricity.js';
 import { pollPump } from './pollers/pump.js';
 import { pollCpi } from './pollers/pxweb.js';
+import { pollConsumerConfidence } from './pollers/confidence.js';
 import { pollStocks } from './pollers/stocks.js';
 import { pollFx } from './pollers/fx.js';
 import { pollOpenSky } from './pollers/opensky.js';
@@ -92,9 +94,11 @@ function countTransitsBetween(startTs, endTs, dir) {
 register('gdelt_nordic', () => pollGdelt(GDELT.modules.nordic), GDELT.modules.nordic.pollMs);
 register('gdelt_infoenv', () => pollGdelt(GDELT.modules.infoenv), GDELT.modules.infoenv.pollMs);
 register('gdelt_infra', () => pollGdelt(GDELT.modules.infra), GDELT.modules.infra.pollMs);
+register('gdelt_social', () => pollGdelt(GDELT.modules.social), GDELT.modules.social.pollMs);
 register('electricity', pollElectricity, ELECTRICITY.pollMs);
 register('pump', pollPump, STATFIN.pollMs);
 register('cpi', pollCpi, STATFIN.pollMs);
+register('confidence', pollConsumerConfidence, STATFIN.pollMs);
 register('stocks', pollStocks, STOCKS.pollMs);
 register('fx', pollFx, FX.pollMs);
 if (OPENSKY.clientId && OPENSKY.clientSecret) {
@@ -105,6 +109,7 @@ if (OPENSKY.clientId && OPENSKY.clientSecret) {
 register('nordic_index', async () => { gatherAndComputeNordic(); }, NORDIC.recomputeMs);
 register('infoenv_index', async () => { gatherAndComputeInfoEnv(); }, INFOENV.recomputeMs);
 register('infra_index', async () => { gatherAndComputeInfra(); }, INFRA.recomputeMs);
+register('social_index', async () => { gatherAndComputeSocial(); }, SOCIAL.recomputeMs);
 register('ncscfi', pollNcscFi, NCSCFI.pollMs);
 register('euvd', pollEuvd, EUVD.pollMs);
 register('certeu', pollCertEu, CERTEU.pollMs);

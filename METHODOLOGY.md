@@ -131,6 +131,129 @@ stable programmatic channel.
 
 ---
 
+## Domain 4 — Civic & critical infrastructure
+
+*Version: **infra-v0***
+
+Tracks cyberattack/energy/water/telecom-disruption pressure around
+Finland/Baltic keywords. Same GDELT mechanism and two-component shape as
+domains 1 and 3.
+
+### The index
+
+`infra = 0.6·V + 0.4·T`
+
+| | Component | Input | Normalization |
+|---|---|---|---|
+| **V** | News volume (60%) | GDELT 24 h article volume for `(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (cyberattack OR "cyber attack" OR ransomware OR "power outage" OR blackout OR "grid failure" OR "critical infrastructure")` vs the median daily volume of calendar 2025 | Same log10 formula as domains 1/3. |
+| **T** | Tone stress (40%) | GDELT 24 h average tone for the same query | Same formula as domains 1/3. |
+
+**Bands:** ≥ 70 **CALM** · 45–69 **ELEVATED** · 20–44 **STRAINED** · < 20
+**CRITICAL**.
+
+**Staleness handling:** same as domains 1/3 (V: 3h, T: 24h).
+
+### Advisory feeds (shown, not scored)
+
+Three genuinely independent sources feed the `infra_advisory` headline
+module without being scored into the index itself — same "shown, not
+scored" treatment as domain 1's AIS/OpenSky layer, until there's an honest
+way to turn advisory counts into a signal:
+
+- **NCSC-FI** (Kyberturvallisuuskeskus) public warnings RSS — confirmed live
+  2026-07-24, real structured RSS, no auth.
+- **ENISA EUVD** (EU Vulnerability Database) — a real JSON REST API under
+  NIS2, confirmed live 2026-07-24, no key required. (ENISA's general news
+  RSS was checked and rejected the same day — irregular press content, not
+  threat intel.)
+- **CERT-EU** security-advisories RSS — confirmed live 2026-07-24, EU
+  institutional feed, ~monthly cadence.
+
+**Fingrid Open Data** (power-system-state traffic light, dataset 209, and
+electricity-shortage status, dataset 336) is polled but not yet wired into
+either the index or the advisory feed — the owner has a provisioned API key
+locally; still needs `fly secrets set FINGRID_API_KEY` to go live.
+
+### Changelog
+
+- **infra-v0** (2026-07-24) — first release. V/T = same GDELT shape as
+  domains 1/3; NCSC-FI/EUVD/CERT-EU wired as shown-not-scored advisories;
+  Fingrid polled, not yet scored.
+
+---
+
+## Domain 5 — Social stability
+
+*Version: **social-v0***
+
+Tracks polarization/unrest pressure around Finland/Baltic keywords, combined
+with Statistics Finland's monthly household-confidence survey — the first
+domain to pair a GDELT news proxy with a genuinely independent official
+statistic scored directly into the index, rather than shown alongside it.
+
+### The index
+
+`social = 0.4·V + 0.3·T + 0.3·C`
+
+| | Component | Input | Normalization |
+|---|---|---|---|
+| **V** | News volume (40%) | GDELT 24 h article volume for `(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (protest OR unrest OR riot OR strike OR "civil unrest" OR polarization OR "social unrest")` vs the median daily volume of calendar 2025 | Same log10 formula as domains 1/3/4. |
+| **T** | Tone stress (30%) | GDELT 24 h average tone for the same query | Same formula as domains 1/3/4. |
+| **C** | Consumer confidence (30%) | Statistics Finland's Consumer Confidence Indicator (StatFin PxWeb table `kbar/11cc`, series `CCI_A1 = (B1+B2+B4+E1)/4`), a monthly balance-figure household survey | `100 × clamp((confidence − (−20)) / (20 − (−20)))` — confidence ≤ −20 scores 0, ≥ +20 scores 100. |
+
+**Bands:** ≥ 70 **CALM** · 45–69 **ELEVATED** · 20–44 **STRAINED** · < 20
+**CRITICAL** — same names as domain 4, deliberately, since both share the
+"attention + mood" shape.
+
+**Staleness handling:** V: 3h, T: 24h, C: 45 days (C is a monthly survey;
+the extra slack absorbs StatFin's normal publication lag without the index
+going stale between releases).
+
+### Component C's normalization span is a placeholder
+
+`confidenceMin`/`confidenceMax` (−20/+20) are a reasonable-looking span based
+on general knowledge of Finnish consumer-confidence history (COVID-era lows
+near −20, good-year highs near +20), not a fitted calibration — the actual
+2025–2026 window checked live at build time only spans −12.5 to −5.3. Revisit
+once more of the real distribution is visible, same caveat as the GDELT
+query wording above.
+
+### Sources evaluated and rejected as automatable feeds
+
+- **Eurobarometer** (European Commission public-opinion portal / GESIS data
+  archive) — publishes only downloadable SPSS/CSV/Excel survey-wave dumps,
+  semi-annual/annual cadence, no queryable API. GESIS's archive 403'd a
+  plain fetch (bot-blocked) on top of that. Usable only as an occasional
+  manual-refresh context source, not integrated.
+- **Eurofound** European Quality of Life Survey — multi-year wave cycle
+  (2016/2020/2023-ish), same downloadable-dataset shape as Eurobarometer;
+  the catalogue endpoint also rate-limited (HTTP 429) when checked. Not
+  integrated.
+- **Findikaattori.fi** — Finland's former official well-being indicator
+  dashboard. Confirmed dead: DNS doesn't resolve, discontinued in 2022. Its
+  successors are THL's Sotkanet and Terveytemme.fi. Removed from
+  consideration entirely, not just deferred.
+- **Poliisi.fi open crime/incident data** — `/en/open-data` and
+  `/en/statistics` both 404. Not chased further since Statistics Finland's
+  own `rpk` tables (offences recorded, coercive measures of the police)
+  already cover the same ground via the confirmed-live PxWeb API — a future
+  v1 could add these as a fourth component or an advisory feed, same
+  treatment as domain 4's Fingrid.
+- **THL Sotkanet** REST API — confirmed live (JSON, no auth, ~3,800
+  indicators), has discrimination-experience indicators that could serve a
+  cohesion angle, but most waves are annual/multi-year. Not integrated in
+  v0; a real candidate for a future component once the index has more than
+  one calm-baseline year of GDELT history to compare against.
+
+### Changelog
+
+- **social-v0** (2026-07-25) — first release. V = GDELT log-ratio (Baltic
+  protest/unrest query) vs calm-2025 baseline; T = GDELT 24h average tone;
+  C = StatFin monthly consumer-confidence balance figure, placeholder
+  normalization span.
+
+---
+
 ## Appendix — the dormant Hormuz Passability Index
 
 *Version: **hpi-v0** (frozen; not actively computed)*
