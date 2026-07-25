@@ -250,6 +250,84 @@ export const SOCIAL = {
 };
 
 // ---------------------------------------------------------------------------
+// Hybrid & grey-zone threats Index — domain 2 (GPS/GNSS jamming, undersea
+// cable/pipeline sabotage, drone incursions, instrumentalized migration at
+// the eastern border). Same GDELT V/T shape as NORDIC/INFOENV/INFRA — two
+// research passes (2026-07-25) checked whether domain 2 could get a third,
+// independent scored component the way domain 5 got StatFin's Consumer
+// Confidence Indicator, and found nothing usable:
+//   - Traficom's GNSS-interference stats are live but HTML tables only
+//     (yearly granularity, no CSV/JSON/API/RSS).
+//   - GPSJam has no public API; its upstream (ADS-B Exchange) is a paid
+//     US-commercial service — against the project's free/EU-preferred rule.
+//     EASA's GNSS interference bulletin is EU-official and Finland-relevant
+//     (EFIN/Helsinki FIR) but HTML-table-only, no export.
+//   - No confirmed working RSS from Puolustusvoimat (drone incursions).
+//   - Migri's migration stats are monthly with no confirmed machine-readable
+//     export; Rajavartiolaitos's old border-crossing stats page died Nov 2022
+//     with no replacement.
+//   - A second pass checked whether other countries/NATO/EU do better:
+//     confirmed it isn't Finland being opaque — no Baltic state, NATO, or
+//     the EU publishes a structured cable/pipeline or border-incident feed.
+//     Cinia (C-Lion1's operator) only posts prose incident announcements.
+//     NATO's Baltic Sentry/Nordic Warden keep an internal maritime picture;
+//     Baltic Sentry's only public channel is a phone/email tip line.
+//     Finland's border opacity is an on-record operational-security policy
+//     (Yle quotes Border Guard officials declining to disclose figures/
+//     capability), not a tooling gap — the rajaturvallisuuslaki (in force
+//     since 2024-07-22, extended to 2026-12-31) exists specifically to
+//     permit this. EUROSUR is internal-only by its own founding design;
+//     Frontex's only public output is an annual PDF risk-analysis report.
+//     Ukraine's alerts.in.ua air-raid API is free/live/well-built but
+//     answers "is this region under active bombardment" — a category
+//     mismatch for peacetime gray-zone monitoring, not a data gap. Hybrid
+//     CoE (Helsinki) and NATO StratCom COE (Riga) are thematically on-point
+//     but publish periodic policy papers with no feed — further-reading
+//     material, not index inputs. See ROADMAP.md for the "build our own
+//     intel source" follow-up (AIS cable-route anomaly detection) this
+//     pointed to instead. See indices/hybrid.js and METHODOLOGY.md.
+// ---------------------------------------------------------------------------
+export const HYBRID = {
+  version: 'hybrid-v0',
+  weights: { V: 0.6, T: 0.4 },
+  bands: [
+    { min: 70, name: 'CALM' },
+    { min: 45, name: 'ELEVATED' },
+    { min: 20, name: 'STRAINED' },
+    { min: 0, name: 'CRITICAL' },
+  ],
+  hysteresisPoints: 2,
+  newsLog10Span: 1,
+  toneCalm: 0,
+  toneExtreme: -8,
+  stalenessMs: {
+    V: 3 * 3600_000,
+    T: 24 * 3600_000,
+  },
+  recomputeMs: 5 * 60_000,
+  snapshotMs: 15 * 60_000,
+};
+
+// ---------------------------------------------------------------------------
+// Rajavartiolaitos (Finnish Border Guard) press-release RSS — domain 2's one
+// confirmed, live, clean feed (checked 2026-07-25:
+// https://raja.fi/uutiset-ja-tiedotteet/-/asset_publisher/kBNrdPA9Hj7T/rss
+// returns well-formed RSS 2.0 with real border-incident items). No category
+// field, so items are keyword-filtered application-side before logging —
+// same "shown, not scored" treatment as domain 4's advisory feeds.
+// ---------------------------------------------------------------------------
+export const RAJAVARTIOLAITOS = {
+  feedUrl: 'https://raja.fi/uutiset-ja-tiedotteet/-/asset_publisher/kBNrdPA9Hj7T/rss',
+  module: 'hybrid_advisory',
+  userAgent: 'tutka-monitor/0.1 (+https://github.com/kurkista/tutka)',
+  // Case-insensitive substring match against title+description; only items
+  // mentioning border/incident topics are logged, not routine PR/personnel
+  // news that also comes through this feed.
+  keywords: ['rajanylitys', 'turvapaikanhak', 'raja', 'rajavartio', 'itäraja', 'venäj'],
+  pollMs: 60 * 60_000,
+};
+
+// ---------------------------------------------------------------------------
 // NCSC-FI (Kyberturvallisuuskeskus) public warnings RSS — domain 4's second,
 // independent (non-GDELT) source. Confirmed live 2026-07-24:
 // https://www.kyberturvallisuuskeskus.fi/feed/rss/fi/401 returns HTTP 200,
@@ -403,6 +481,17 @@ export const GDELT = {
       calmStart: '20250101000000',
       calmEnd: '20251231235959',
     },
+    // Domain 2's GDELT half — see HYBRID/RAJAVARTIOLAITOS above for the rest
+    // of the domain. Query is a draft, same retune-once-real-volume caveat
+    // as nordic/infra/social above.
+    hybrid: {
+      module: 'hybrid',
+      query: '(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (jamming OR GPS OR GNSS OR spoofing OR "undersea cable" OR pipeline OR sabotage OR drone OR incursion OR "border crossing" OR migrant)',
+      seriesPrefix: 'gdelt_hybrid_',
+      pollMs: 30 * 60_000,
+      calmStart: '20250101000000',
+      calmEnd: '20251231235959',
+    },
   },
 };
 
@@ -534,6 +623,11 @@ export const PUBLIC_METRICS = [
   'gdelt_social_tone',
   'social_index',
   'social_consumer_confidence',
+  // Domain 2 (Hybrid & grey-zone threats).
+  'gdelt_hybrid_vol24h',
+  'gdelt_hybrid_median30d',
+  'gdelt_hybrid_tone',
+  'hybrid_index',
   'nordic_vessels_in_zone',
   'nordic_unique_large_24h',
   'flights_count',

@@ -254,6 +254,114 @@ query wording above.
 
 ---
 
+## Domain 2 — Hybrid & grey-zone threats
+
+*Version: **hybrid-v0***
+
+Tracks GPS/GNSS jamming, undersea cable/pipeline sabotage, drone-incursion,
+and instrumentalized-migration pressure around Finland/Baltic keywords. Same
+GDELT two-component shape as domain 4 — this domain does *not* get a third,
+independently scored component the way domain 5 got StatFin's Consumer
+Confidence Indicator; see "Sources evaluated and rejected" below for why.
+
+### The index
+
+`hybrid = 0.6·V + 0.4·T`
+
+| | Component | Input | Normalization |
+|---|---|---|---|
+| **V** | News volume (60%) | GDELT 24 h article volume for `(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (jamming OR GPS OR GNSS OR spoofing OR "undersea cable" OR pipeline OR sabotage OR drone OR incursion OR "border crossing" OR migrant)` vs the median daily volume of calendar 2025 | Same log10 formula as domains 1/3/4/5. |
+| **T** | Tone stress (40%) | GDELT 24 h average tone for the same query | Same formula as domains 1/3/4/5. |
+
+**Bands:** ≥ 70 **CALM** · 45–69 **ELEVATED** · 20–44 **STRAINED** · < 20
+**CRITICAL** — same names as domain 4.
+
+**Staleness handling:** same as domains 1/3/4 (V: 3h, T: 24h).
+
+### Advisory feed (shown, not scored)
+
+**Rajavartiolaitos** (Finnish Border Guard) press-release RSS — confirmed
+live 2026-07-25, well-formed RSS 2.0
+(`https://raja.fi/uutiset-ja-tiedotteet/-/asset_publisher/kBNrdPA9Hj7T/rss`).
+The feed has no category field and mixes routine press releases with real
+border-incident news, so items are kept only if their title matches a
+keyword list (`rajanylitys`, `turvapaikanhak`, `raja`, `rajavartio`,
+`itäraja`, `venäj`) before being logged under `hybrid_advisory` — same
+"shown, not scored" treatment as domain 4's NCSC-FI/EUVD/CERT-EU feeds.
+
+### Sources evaluated and rejected as automatable feeds
+
+Two research passes (2026-07-25) checked this domain's candidate sources
+more thoroughly than any prior domain, specifically because the obvious
+ones turned out weak. First pass — Finland's own likely sources:
+
+- **Traficom** GNSS/GPS interference statistics — live
+  (`tieto.traficom.fi`), but HTML tables only at yearly granularity, no
+  CSV/JSON/API/RSS.
+- **GPSJam** — no public API; its underlying data source, ADS-B Exchange,
+  is a paid US-commercial API, against this project's free/EU-preferred
+  sourcing rule regardless. **EASA's GNSS interference bulletin** is
+  EU-official and Finland-relevant (EFIN/Helsinki FIR appears in its
+  7-day/30-day windows) but is an HTML table with no export — scrape-only.
+- **Puolustusvoimat** (Finnish Defence Forces) — no confirmed working RSS
+  for drone-incursion coverage; the one feed URL tested returned HTML, not
+  valid XML.
+- **Migri** migration statistics — monthly cadence (published the 15th of
+  the following month), no confirmed machine-readable export.
+  **Rajavartiolaitos**'s old border-crossing statistics page stopped
+  updating in November 2022 with no live replacement; no StatFin table
+  covers this data either.
+
+A second pass checked whether *other* countries or institutions do better,
+so Finland's thin sourcing isn't mistaken for the regional ceiling:
+
+- **Cable/pipeline monitoring (Sweden, Estonia, NATO/EU)** — no country
+  publishes a structured feed. Cinia (C-Lion1's operator) only posts prose
+  incident announcements. NATO's Baltic Sentry/Nordic Warden maintain an
+  internal "maritime situational picture" that is explicitly not public;
+  Baltic Sentry's only public channel is a phone/email tip line for ships.
+  EMSA's CleanSeaNet is real and live but scoped to oil-spill/vessel
+  detection, not cable integrity.
+- **Finland's land border** — confirmed, on the record, that limited public
+  disclosure is a deliberate operational-security policy, not a tooling
+  gap: Yle quotes Border Guard officials declining to disclose
+  border-situation figures, surveillance capability, or tactics for
+  security reasons, and the rajaturvallisuuslaki (in force since
+  2024-07-22, extended to 2026-12-31) exists specifically to permit
+  less-disclosed measures against instrumentalized migration. Finnish
+  Customs' Uljas API (`tilastot.tulli.fi`) is real, free, and
+  machine-readable, but measures goods/vehicle trade traffic, not
+  migration or incidents — tangential at best.
+- **EU-level (EUROSUR/Frontex)** — EUROSUR is internal-only by its own
+  founding design, restricted to Schengen border-guard authorities, no
+  public API. Frontex's only public output is an annual PDF risk-analysis
+  report — periodic, not a feed.
+- **Ukraine's air-raid alert infrastructure** (`alerts.in.ua` — free, live,
+  well-built JSON API) was checked as a possible model. Ruled out: it
+  answers "is this region under active bombardment right now," the wrong
+  question for peacetime gray-zone monitoring — a category mismatch with
+  Finland's threat model, not a data gap.
+- **Hybrid CoE** (European Centre of Excellence for Countering Hybrid
+  Threats, headquartered in Helsinki) and **NATO StratCom Centre of
+  Excellence** (Riga) are thematically on-point and worth linking as
+  further reading, but publish periodic policy papers with no RSS/API —
+  reference material, not pollable index inputs.
+
+See ROADMAP.md for the "build our own intel source" follow-up this pointed
+to — since no feed exists to find, an AIS-derived cable-route anomaly
+detector (reusing tutka's existing live AIS ingestion) is the one
+genuinely differentiated signal available, scoped there as future work.
+
+### Changelog
+
+- **hybrid-v0** (2026-07-25) — first release. V/T = same GDELT shape as
+  domains 1/3/4/5; Rajavartiolaitos press RSS wired as a keyword-filtered,
+  shown-not-scored advisory feed. No third scored component, unlike
+  domain 5 — none of the candidate sources checked (two research passes)
+  cleared the bar for a real, structured, pollable feed.
+
+---
+
 ## Appendix — the dormant Hormuz Passability Index
 
 *Version: **hpi-v0** (frozen; not actively computed)*

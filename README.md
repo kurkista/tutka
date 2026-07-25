@@ -13,14 +13,14 @@ Nordic/Baltic tension. The project (repo and live app) has since been renamed
 Domain 1 was originally built as a Hormuz-only monitor, then rebuilt to
 track Nordic/Baltic-Russia tension instead — Hormuz's own working code and
 data stay in the repo (dormant, not deleted; see below), but no longer
-drive the live app. Domains 3, 4, and 5 followed the same GDELT-backed
+drive the live app. Domains 2, 3, 4, and 5 followed the same GDELT-backed
 weighted-index shape. See **[ROADMAP.md](ROADMAP.md)** for what's still
 scouted-but-not-built.
 
 | # | Domain | What it tracks | Status |
 |---|---|---|---|
 | 1 | State & military tension | Chokepoints, troop movements, official statements — Nordic/Baltic-Russia tension is the live instance | **Built** |
-| 2 | Hybrid & grey-zone threats | GPS jamming, undersea cable/pipeline sabotage, drone incursions, border incidents | Scouted (ROADMAP.md) |
+| 2 | Hybrid & grey-zone threats | GPS jamming, undersea cable/pipeline sabotage, drone incursions, border incidents | **Built** (backend; no deep-dive UI yet) |
 | 3 | Information environment | Disinformation / influence-operation narrative pressure | **Built** |
 | 4 | Civic & critical infrastructure | Cyberattacks, energy/water/telecom disruptions | **Built** (backend; no deep-dive UI yet) |
 | 5 | Social stability | Polarization, public trust, unrest | **Built** (backend; no deep-dive UI yet) |
@@ -47,6 +47,20 @@ away working code" approach. It is simply no longer scheduled: no live
 polling, no UI. Its historical data remains queryable (`/api/export`,
 `/api/series/hpi` etc.) and its methodology section stays in
 METHODOLOGY.md for reference.
+
+## Domain 2 — Hybrid & grey-zone threats
+
+Tracks GPS/GNSS jamming, undersea cable/pipeline sabotage, drone-incursion,
+and instrumentalized-migration pressure around Finland/Baltic keywords, same
+GDELT two-component shape as domains 1/3/4/5. Rajavartiolaitos's
+(Finnish Border Guard) press-release RSS is logged alongside it as
+keyword-filtered headlines (shown, not scored) — the weakest sourcing of
+any built domain: two research passes confirmed no Baltic state, NATO, or
+the EU publishes a structured feed for these threat categories, so there's
+no third scored component the way domain 5 got one. See METHODOLOGY.md for
+the full source-verification notes, and ROADMAP.md for a scoped "build our
+own intel source" follow-up (an AIS-derived cable-route anomaly detector).
+No frontend deep-dive yet (see below).
 
 ## Domain 3 — Information environment
 

@@ -3,8 +3,9 @@
 try { process.loadEnvFile(); } catch { /* no .env — fine in production */ }
 
 import {
-  DB_PATH, VESSELS, INFOENV, NORDIC, INFRA, SOCIAL, GDELT,
+  DB_PATH, VESSELS, INFOENV, NORDIC, INFRA, SOCIAL, HYBRID, GDELT,
   ELECTRICITY, STATFIN, STOCKS, FX, OPENSKY, NCSCFI, EUVD, CERTEU, FINGRID,
+  RAJAVARTIOLAITOS,
 } from './config.js';
 import { openDb, putTransit, prune, transitsSince, upsertVesselsDaily, putSeries } from './db.js';
 import { VesselStore } from './vessels.js';
@@ -16,6 +17,7 @@ import { gatherAndComputeNordic } from './indices/nordic.js';
 import { gatherAndComputeInfoEnv } from './indices/infoenv.js';
 import { gatherAndComputeInfra } from './indices/infra.js';
 import { gatherAndComputeSocial } from './indices/social.js';
+import { gatherAndComputeHybrid } from './indices/hybrid.js';
 import { pollGdelt } from './pollers/gdelt.js';
 import { pollElectricity } from './pollers/electricity.js';
 import { pollPump } from './pollers/pump.js';
@@ -28,6 +30,7 @@ import { pollNcscFi } from './pollers/ncscfi.js';
 import { pollEuvd } from './pollers/euvd.js';
 import { pollCertEu } from './pollers/certeu.js';
 import { pollFingridState } from './pollers/fingrid.js';
+import { pollRajavartiolaitos } from './pollers/rajavartiolaitos.js';
 
 openDb(DB_PATH);
 
@@ -95,6 +98,7 @@ register('gdelt_nordic', () => pollGdelt(GDELT.modules.nordic), GDELT.modules.no
 register('gdelt_infoenv', () => pollGdelt(GDELT.modules.infoenv), GDELT.modules.infoenv.pollMs);
 register('gdelt_infra', () => pollGdelt(GDELT.modules.infra), GDELT.modules.infra.pollMs);
 register('gdelt_social', () => pollGdelt(GDELT.modules.social), GDELT.modules.social.pollMs);
+register('gdelt_hybrid', () => pollGdelt(GDELT.modules.hybrid), GDELT.modules.hybrid.pollMs);
 register('electricity', pollElectricity, ELECTRICITY.pollMs);
 register('pump', pollPump, STATFIN.pollMs);
 register('cpi', pollCpi, STATFIN.pollMs);
@@ -110,9 +114,11 @@ register('nordic_index', async () => { gatherAndComputeNordic(); }, NORDIC.recom
 register('infoenv_index', async () => { gatherAndComputeInfoEnv(); }, INFOENV.recomputeMs);
 register('infra_index', async () => { gatherAndComputeInfra(); }, INFRA.recomputeMs);
 register('social_index', async () => { gatherAndComputeSocial(); }, SOCIAL.recomputeMs);
+register('hybrid_index', async () => { gatherAndComputeHybrid(); }, HYBRID.recomputeMs);
 register('ncscfi', pollNcscFi, NCSCFI.pollMs);
 register('euvd', pollEuvd, EUVD.pollMs);
 register('certeu', pollCertEu, CERTEU.pollMs);
+register('rajavartiolaitos', pollRajavartiolaitos, RAJAVARTIOLAITOS.pollMs);
 if (FINGRID.apiKey) {
   register('fingrid', pollFingridState, FINGRID.pollMs);
 } else {

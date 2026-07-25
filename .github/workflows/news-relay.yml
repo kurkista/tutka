@@ -36,6 +36,8 @@ jobs:
             query: '(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (cyberattack OR "cyber attack" OR ransomware OR "power outage" OR blackout OR "grid failure" OR "critical infrastructure")'
           - module: social
             query: '(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (protest OR unrest OR riot OR strike OR "civil unrest" OR polarization OR "social unrest")'
+          - module: hybrid
+            query: '(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (jamming OR GPS OR GNSS OR spoofing OR "undersea cable" OR pipeline OR sabotage OR drone OR incursion OR "border crossing" OR migrant)'
     env:
       GDELT_MODULE: ${{ matrix.module }}
       GDELT_QUERY: ${{ matrix.query }}

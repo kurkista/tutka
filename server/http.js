@@ -22,6 +22,7 @@ import { gatherAndComputeNordic } from './indices/nordic.js';
 import { gatherAndComputeInfoEnv } from './indices/infoenv.js';
 import { gatherAndComputeInfra } from './indices/infra.js';
 import { gatherAndComputeSocial } from './indices/social.js';
+import { gatherAndComputeHybrid } from './indices/hybrid.js';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 /** @type {{hormuz: any[], nordic: any[], infoenv: any[]}} */
@@ -59,7 +60,7 @@ export function startHttp({ store }) {
     for (const res of clients) res.write(': ping\n\n');
   }, SSE.pingMs).unref?.();
 
-  for (const event of ['vessels', 'transit', 'nordic_index', 'infoenv_index', 'infra_index', 'social_index', 'metric', 'headline', 'flights']) {
+  for (const event of ['vessels', 'transit', 'nordic_index', 'infoenv_index', 'infra_index', 'social_index', 'hybrid_index', 'metric', 'headline', 'flights']) {
     bus.on(event, (data) => broadcast(event, data));
   }
 
@@ -121,6 +122,11 @@ export function startHttp({ store }) {
           index: latestIndexSnapshot('social') ?? null,
           headlines: recentHeadlines(20, 'social'),
         },
+        hybrid: {
+          index: latestIndexSnapshot('hybrid') ?? null,
+          headlines: recentHeadlines(20, 'hybrid'),
+          advisories: recentHeadlines(20, 'hybrid_advisory'),
+        },
       },
     });
   });
@@ -174,6 +180,7 @@ export function startHttp({ store }) {
       if (cfg.module === 'infoenv') gatherAndComputeInfoEnv();
       if (cfg.module === 'infra') gatherAndComputeInfra();
       if (cfg.module === 'social') gatherAndComputeSocial();
+      if (cfg.module === 'hybrid') gatherAndComputeHybrid();
       console.log(`[ingest] gdelt relay (${cfg.module}) stored: ${stored.join(', ')}`);
       res.json({ ok: true, stored });
     } catch (err) {
@@ -185,8 +192,8 @@ export function startHttp({ store }) {
     res.type('text/markdown').send(readFileSync(path.join(root, 'METHODOLOGY.md'), 'utf8'));
   });
 
-  // Domains 2/4/5/6 have no built deep-dive yet; the frontend fetches this
-  // once and splits it client-side on its "## Domain N —" headings.
+  // Domain 6 has no built deep-dive yet; the frontend fetches this once and
+  // splits it client-side on its "## Domain N —" headings.
   app.get('/api/roadmap', (req, res) => {
     res.type('text/markdown').send(readFileSync(path.join(root, 'ROADMAP.md'), 'utf8'));
   });
