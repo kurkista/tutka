@@ -205,6 +205,235 @@ export const INFRA = {
 };
 
 // ---------------------------------------------------------------------------
+// Social stability Index — domain 5 (polarization, public trust, unrest).
+// Same GDELT V/T shape as NORDIC/INFOENV/INFRA, plus a third, genuinely
+// independent official signal: Statistics Finland's monthly Consumer
+// Confidence Indicator (see STATFIN.confidenceUrl and pollers/confidence.js)
+// — a real household-mood survey, not a news-attention proxy. Verified
+// 2026-07-25: StatFin's kbar/11cc table returns real json-stat2 data back to
+// 1995M10, series CCI_A1 = "Consumer confidence indicator, CCI =
+// (B1+B2+B4+E1)/4". Eurobarometer and Eurofound's EQLS were evaluated and
+// rejected as *feeds*: both publish only downloadable survey-wave dumps
+// (SPSS/CSV via GESIS), semi-annual/multi-year cadence, no queryable API —
+// GESIS's own archive 403'd a plain fetch. Findikaattori.fi (the other
+// obvious candidate) is confirmed dead — discontinued 2022, DNS doesn't even
+// resolve. See indices/social.js and METHODOLOGY.md.
+// ---------------------------------------------------------------------------
+export const SOCIAL = {
+  version: 'social-v0',
+  weights: { V: 0.4, T: 0.3, C: 0.3 },
+  bands: [
+    { min: 70, name: 'CALM' },
+    { min: 45, name: 'ELEVATED' },
+    { min: 20, name: 'STRAINED' },
+    { min: 0, name: 'CRITICAL' },
+  ],
+  hysteresisPoints: 2,
+  newsLog10Span: 1,
+  toneCalm: 0,
+  toneExtreme: -8,
+  // StatFin's CCI_A1 balance figure has run roughly -12.5..-5.3 across
+  // 2025-2026 (checked live); historically Finnish consumer confidence has
+  // ranged wider (COVID-era lows near -20, good-year highs near +20). Using
+  // that wider span so the score isn't pinned near one edge by a short
+  // recent window — revisit once more of the real distribution is visible,
+  // same caveat as the other domains' draft GDELT queries.
+  confidenceMin: -20,
+  confidenceMax: 20,
+  stalenessMs: {
+    V: 3 * 3600_000,
+    T: 24 * 3600_000,
+    C: 45 * 24 * 3600_000, // monthly survey; allow a bit over a month's slack
+  },
+  recomputeMs: 5 * 60_000,
+  snapshotMs: 15 * 60_000,
+};
+
+// ---------------------------------------------------------------------------
+// Hybrid & grey-zone threats Index — domain 2 (GPS/GNSS jamming, undersea
+// cable/pipeline sabotage, drone incursions, instrumentalized migration at
+// the eastern border). Same GDELT V/T shape as NORDIC/INFOENV/INFRA — two
+// research passes (2026-07-25) checked whether domain 2 could get a third,
+// independent scored component the way domain 5 got StatFin's Consumer
+// Confidence Indicator, and found nothing usable:
+//   - Traficom's GNSS-interference stats are live but HTML tables only
+//     (yearly granularity, no CSV/JSON/API/RSS).
+//   - GPSJam has no public API; its upstream (ADS-B Exchange) is a paid
+//     US-commercial service — against the project's free/EU-preferred rule.
+//     EASA's GNSS interference bulletin is EU-official and Finland-relevant
+//     (EFIN/Helsinki FIR) but HTML-table-only, no export.
+//   - No confirmed working RSS from Puolustusvoimat (drone incursions).
+//   - Migri's migration stats are monthly with no confirmed machine-readable
+//     export; Rajavartiolaitos's old border-crossing stats page died Nov 2022
+//     with no replacement.
+//   - A second pass checked whether other countries/NATO/EU do better:
+//     confirmed it isn't Finland being opaque — no Baltic state, NATO, or
+//     the EU publishes a structured cable/pipeline or border-incident feed.
+//     Cinia (C-Lion1's operator) only posts prose incident announcements.
+//     NATO's Baltic Sentry/Nordic Warden keep an internal maritime picture;
+//     Baltic Sentry's only public channel is a phone/email tip line.
+//     Finland's border opacity is an on-record operational-security policy
+//     (Yle quotes Border Guard officials declining to disclose figures/
+//     capability), not a tooling gap — the rajaturvallisuuslaki (in force
+//     since 2024-07-22, extended to 2026-12-31) exists specifically to
+//     permit this. EUROSUR is internal-only by its own founding design;
+//     Frontex's only public output is an annual PDF risk-analysis report.
+//     Ukraine's alerts.in.ua air-raid API is free/live/well-built but
+//     answers "is this region under active bombardment" — a category
+//     mismatch for peacetime gray-zone monitoring, not a data gap. Hybrid
+//     CoE (Helsinki) and NATO StratCom COE (Riga) are thematically on-point
+//     but publish periodic policy papers with no feed — further-reading
+//     material, not index inputs. See ROADMAP.md for the "build our own
+//     intel source" follow-up (AIS cable-route anomaly detection) this
+//     pointed to instead. See indices/hybrid.js and METHODOLOGY.md.
+// ---------------------------------------------------------------------------
+export const HYBRID = {
+  version: 'hybrid-v0',
+  weights: { V: 0.6, T: 0.4 },
+  bands: [
+    { min: 70, name: 'CALM' },
+    { min: 45, name: 'ELEVATED' },
+    { min: 20, name: 'STRAINED' },
+    { min: 0, name: 'CRITICAL' },
+  ],
+  hysteresisPoints: 2,
+  newsLog10Span: 1,
+  toneCalm: 0,
+  toneExtreme: -8,
+  stalenessMs: {
+    V: 3 * 3600_000,
+    T: 24 * 3600_000,
+  },
+  recomputeMs: 5 * 60_000,
+  snapshotMs: 15 * 60_000,
+};
+
+// ---------------------------------------------------------------------------
+// Environmental & climate security Index — domain 6 (wildfire, drought,
+// extreme-weather stress with infrastructure/security implications). Unlike
+// domain 2, this domain DOES get a third, genuinely independent scored
+// component — same precedent as domain 5's StatFin CCI — after four research
+// passes (2026-07-25/26) checked FMI, EFFIS, Copernicus C3S, EMSA
+// CleanSeaNet, NOAA, and ESA:
+//   - FMI's forest-fire warning index (metsäpalovaroitus) is real but
+//     confirmed absent from opendata.fmi.fi's stored-query catalog — checked
+//     directly against listStoredQueries, not assumed. Disseminated only via
+//     a webpage/map, finalized by a duty meteorologist.
+//   - EFFIS's daily Fire Danger Forecast (FWI) is WMS map-tile only, no
+//     JSON/download endpoint. Its burnt-area history IS downloadable but
+//     that's retrospective, not a live risk signal.
+//   - Copernicus C3S's Fire Weather Index needs a CDS account and delivers
+//     gridded NetCDF/GRIB — real GIS/xarray processing to get "today's value
+//     for Finland," disproportionate for this stack.
+//   - EMSA CleanSeaNet (Baltic oil-spill detection): same dead end as domain
+//     2's cable-incident sources — real-time detections are gated to
+//     national authorities; the only public artifact is an annual
+//     retrospective ZIP.
+//   - NOAA: dead end. Drought.gov's API is raster (GeoTIFF/XYZ) despite
+//     looking like an API; Climate Prediction Center coverage is practically
+//     US-only. Also US-based, against the project's EU-preference anyway.
+//   - ESA/Copernicus Data Space Ecosystem (STAC/openEO/Sentinel Hub): real
+//     EU infrastructure but raw/derived satellite *access*, not a
+//     pre-computed simple index — same GIS-processing barrier as C3S.
+//   - Comparative check: Sweden's MSB (domestic hazard-map GIS tool, not
+//     this shape), Estonia's Rescue Board, NATO's Climate Change and
+//     Security Centre, and Finland's Huoltovarmuuskeskus/NESA all
+//     report/policy-paper-only, no structured feed.
+//   - NASA FIRMS (Fire Information for Resource Management System) is the
+//     one genuine win: free self-service API key, Area API returns flat CSV
+//     of active fire/hotspot detections for a bounding box — plain HTTP GET
+//     + CSV parse, no rasters. US-based (flagged against EU-preference; no
+//     EU equivalent at this simplicity exists). See FIRMS below and
+//     pollers/firms.js — this is the F component.
+//   - Meteoalarm (feeds.meteoalarm.org) confirmed live for all four
+//     countries (curl -I, 2026-07-26): free, no auth, CAP-derived Atom
+//     feeds, severe-weather warnings. Logged as advisory headlines (shown,
+//     not scored) — see METEOALARM below.
+// See indices/climate.js and METHODOLOGY.md.
+// ---------------------------------------------------------------------------
+export const CLIMATE = {
+  version: 'climate-v0',
+  weights: { V: 0.4, T: 0.3, F: 0.3 },
+  bands: [
+    { min: 70, name: 'CALM' },
+    { min: 45, name: 'ELEVATED' },
+    { min: 20, name: 'STRAINED' },
+    { min: 0, name: 'CRITICAL' },
+  ],
+  hysteresisPoints: 2,
+  newsLog10Span: 1,
+  toneCalm: 0,
+  toneExtreme: -8,
+  stalenessMs: {
+    V: 3 * 3600_000,
+    T: 24 * 3600_000,
+    F: 24 * 3600_000,
+  },
+  recomputeMs: 5 * 60_000,
+  snapshotMs: 15 * 60_000,
+};
+
+// ---------------------------------------------------------------------------
+// NASA FIRMS (Fire Information for Resource Management System) — domain 6's
+// F component: active-fire/hotspot count over Finland + the Baltic states
+// from VIIRS. Requires a free MAP_KEY (self-service registration at
+// https://firms.modaps.eosdis.nasa.gov/api/map_key/); poller no-ops with a
+// warning if unset, same "optional key" pattern as AISSTREAM_API_KEY. Score
+// is a placeholder linear falloff (100 − count×scorePerHotspot, clamped
+// [0,100]) pending real distribution data once the poller has run for a
+// while — same caveat as SOCIAL's confidence-span placeholder.
+// ---------------------------------------------------------------------------
+export const FIRMS = {
+  apiBase: 'https://firms.modaps.eosdis.nasa.gov/api/area/csv',
+  mapKey: process.env.FIRMS_MAP_KEY || '',
+  // west, south, east, north — Finland + Baltic states landmass.
+  bbox: [20, 53, 32, 70.5],
+  source: 'VIIRS_SNPP_NRT',
+  dayRange: 1,
+  scorePerHotspot: 5,
+  pollMs: 3 * 3600_000,
+};
+
+// ---------------------------------------------------------------------------
+// Meteoalarm — domain 6's advisory feed: per-country CAP-derived Atom feeds
+// of active severe-weather warnings, confirmed live for Finland, Estonia,
+// Latvia, and Lithuania (curl -I, 2026-07-26, all HTTP 200). No category
+// filtering needed (already scoped to severe-weather warnings only) — logged
+// as headlines under module 'climate_advisory', same "shown, not scored"
+// treatment as domain 4's advisory feeds.
+// ---------------------------------------------------------------------------
+export const METEOALARM = {
+  feeds: [
+    { country: 'Finland', url: 'https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-finland' },
+    { country: 'Estonia', url: 'https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-estonia' },
+    { country: 'Latvia', url: 'https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-latvia' },
+    { country: 'Lithuania', url: 'https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-lithuania' },
+  ],
+  module: 'climate_advisory',
+  userAgent: 'tutka-monitor/0.1 (+https://github.com/kurkista/tutka)',
+  pollMs: 60 * 60_000,
+};
+
+// ---------------------------------------------------------------------------
+// Rajavartiolaitos (Finnish Border Guard) press-release RSS — domain 2's one
+// confirmed, live, clean feed (checked 2026-07-25:
+// https://raja.fi/uutiset-ja-tiedotteet/-/asset_publisher/kBNrdPA9Hj7T/rss
+// returns well-formed RSS 2.0 with real border-incident items). No category
+// field, so items are keyword-filtered application-side before logging —
+// same "shown, not scored" treatment as domain 4's advisory feeds.
+// ---------------------------------------------------------------------------
+export const RAJAVARTIOLAITOS = {
+  feedUrl: 'https://raja.fi/uutiset-ja-tiedotteet/-/asset_publisher/kBNrdPA9Hj7T/rss',
+  module: 'hybrid_advisory',
+  userAgent: 'tutka-monitor/0.1 (+https://github.com/kurkista/tutka)',
+  // Case-insensitive substring match against title+description; only items
+  // mentioning border/incident topics are logged, not routine PR/personnel
+  // news that also comes through this feed.
+  keywords: ['rajanylitys', 'turvapaikanhak', 'raja', 'rajavartio', 'itäraja', 'venäj'],
+  pollMs: 60 * 60_000,
+};
+
+// ---------------------------------------------------------------------------
 // NCSC-FI (Kyberturvallisuuskeskus) public warnings RSS — domain 4's second,
 // independent (non-GDELT) source. Confirmed live 2026-07-24:
 // https://www.kyberturvallisuuskeskus.fi/feed/rss/fi/401 returns HTTP 200,
@@ -347,6 +576,39 @@ export const GDELT = {
       calmStart: '20250101000000',
       calmEnd: '20251231235959',
     },
+    // Domain 5's GDELT half — see SOCIAL/STATFIN above for the rest of the
+    // domain. Query is a draft, same retune-once-real-volume caveat as
+    // nordic/infra above.
+    social: {
+      module: 'social',
+      query: '(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (protest OR unrest OR riot OR strike OR "civil unrest" OR polarization OR "social unrest")',
+      seriesPrefix: 'gdelt_social_',
+      pollMs: 30 * 60_000,
+      calmStart: '20250101000000',
+      calmEnd: '20251231235959',
+    },
+    // Domain 2's GDELT half — see HYBRID/RAJAVARTIOLAITOS above for the rest
+    // of the domain. Query is a draft, same retune-once-real-volume caveat
+    // as nordic/infra/social above.
+    hybrid: {
+      module: 'hybrid',
+      query: '(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (jamming OR GPS OR GNSS OR spoofing OR "undersea cable" OR pipeline OR sabotage OR drone OR incursion OR "border crossing" OR migrant)',
+      seriesPrefix: 'gdelt_hybrid_',
+      pollMs: 30 * 60_000,
+      calmStart: '20250101000000',
+      calmEnd: '20251231235959',
+    },
+    // Domain 6's GDELT half — see CLIMATE/FIRMS/METEOALARM above for the rest
+    // of the domain. Query is a draft, same retune-once-real-volume caveat
+    // as nordic/infra/social/hybrid above.
+    climate: {
+      module: 'climate',
+      query: '(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (wildfire OR "forest fire" OR drought OR heatwave OR flooding OR "storm damage" OR "extreme weather" OR "grid resilience")',
+      seriesPrefix: 'gdelt_climate_',
+      pollMs: 30 * 60_000,
+      calmStart: '20250101000000',
+      calmEnd: '20251231235959',
+    },
   },
 };
 
@@ -386,8 +648,11 @@ export const STATFIN = {
   // Statistics Finland PxWeb API (free, no key).
   // 11xx = average prices of liquid fuels, monthly, €/L, 2002M01→
   // 122p = annual change of the Consumer Price Index, monthly.
+  // kbar/11cc = Consumer Confidence balance figures, monthly, 1995M10→ —
+  // domain 5's C component (see SOCIAL above and pollers/confidence.js).
   fuelUrl: 'https://statfin.stat.fi/PxWeb/api/v1/en/StatFin/khi/11xx.px',
   cpiUrl: 'https://statfin.stat.fi/PxWeb/api/v1/en/StatFin/khi/122p.px',
+  confidenceUrl: 'https://statfin.stat.fi/PxWeb/api/v1/en/StatFin/kbar/11cc.px',
   fuelCodes: { pump_e95: '0700200', pump_diesel: '0700100', pump_heatoil: '0400500' },
   pollMs: 24 * 3600_000, // data changes monthly; a daily check is plenty
 };
@@ -465,6 +730,27 @@ export const PUBLIC_METRICS = [
   'gdelt_infoenv_median30d',
   'gdelt_infoenv_tone',
   'infoenv_index',
+  // Domain 4 (Civic & critical infrastructure) and domain 5 (Social stability).
+  'gdelt_infra_vol24h',
+  'gdelt_infra_median30d',
+  'gdelt_infra_tone',
+  'infra_index',
+  'gdelt_social_vol24h',
+  'gdelt_social_median30d',
+  'gdelt_social_tone',
+  'social_index',
+  'social_consumer_confidence',
+  // Domain 2 (Hybrid & grey-zone threats).
+  'gdelt_hybrid_vol24h',
+  'gdelt_hybrid_median30d',
+  'gdelt_hybrid_tone',
+  'hybrid_index',
+  // Domain 6 (Environmental & climate security).
+  'gdelt_climate_vol24h',
+  'gdelt_climate_median30d',
+  'gdelt_climate_tone',
+  'firms_hotspot_count',
+  'climate_index',
   'nordic_vessels_in_zone',
   'nordic_unique_large_24h',
   'flights_count',

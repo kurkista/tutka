@@ -13,19 +13,19 @@ Nordic/Baltic tension. The project (repo and live app) has since been renamed
 Domain 1 was originally built as a Hormuz-only monitor, then rebuilt to
 track Nordic/Baltic-Russia tension instead — Hormuz's own working code and
 data stay in the repo (dormant, not deleted; see below), but no longer
-drive the live app. Domain 3 (Information environment) is the second real
-domain, proving the platform can hold more than one before investing in
-domains that need brand-new data sourcing. See **[ROADMAP.md](ROADMAP.md)**
-for what's scouted-but-not-built.
+drive the live app. Domains 2, 3, 4, 5, and 6 followed the same GDELT-backed
+weighted-index shape. All six domains are now built — see
+**[ROADMAP.md](ROADMAP.md)** for fast-follow upgrade ideas that didn't make
+the first pass.
 
 | # | Domain | What it tracks | Status |
 |---|---|---|---|
 | 1 | State & military tension | Chokepoints, troop movements, official statements — Nordic/Baltic-Russia tension is the live instance | **Built** |
-| 2 | Hybrid & grey-zone threats | GPS jamming, undersea cable/pipeline sabotage, drone incursions, border incidents | Scouted (ROADMAP.md) |
+| 2 | Hybrid & grey-zone threats | GPS jamming, undersea cable/pipeline sabotage, drone incursions, border incidents | **Built** (backend; no deep-dive UI yet) |
 | 3 | Information environment | Disinformation / influence-operation narrative pressure | **Built** |
-| 4 | Civic & critical infrastructure | Cyberattacks, energy/water/telecom disruptions | Scouted (ROADMAP.md) |
-| 5 | Social stability | Polarization, public trust, unrest | Scouted (ROADMAP.md) |
-| 6 | Environmental & climate security | — | Scouted (ROADMAP.md), may fold into #4 |
+| 4 | Civic & critical infrastructure | Cyberattacks, energy/water/telecom disruptions | **Built** (backend; no deep-dive UI yet) |
+| 5 | Social stability | Polarization, public trust, unrest | **Built** (backend; no deep-dive UI yet) |
+| 6 | Environmental & climate security | Wildfire/drought/extreme-weather pressure, active-fire hotspots | **Built** (backend; no deep-dive UI yet) |
 
 Every domain's index is versioned and fully explained in
 **[METHODOLOGY.md](METHODOLOGY.md)** (also rendered inside the app).
@@ -49,6 +49,20 @@ polling, no UI. Its historical data remains queryable (`/api/export`,
 `/api/series/hpi` etc.) and its methodology section stays in
 METHODOLOGY.md for reference.
 
+## Domain 2 — Hybrid & grey-zone threats
+
+Tracks GPS/GNSS jamming, undersea cable/pipeline sabotage, drone-incursion,
+and instrumentalized-migration pressure around Finland/Baltic keywords, same
+GDELT two-component shape as domains 1/3/4/5. Rajavartiolaitos's
+(Finnish Border Guard) press-release RSS is logged alongside it as
+keyword-filtered headlines (shown, not scored) — the weakest sourcing of
+any built domain: two research passes confirmed no Baltic state, NATO, or
+the EU publishes a structured feed for these threat categories, so there's
+no third scored component the way domain 5 got one. See METHODOLOGY.md for
+the full source-verification notes, and ROADMAP.md for a scoped "build our
+own intel source" follow-up (an AIS-derived cable-route anomaly detector).
+No frontend deep-dive yet (see below).
+
 ## Domain 3 — Information environment
 
 Tracks disinformation/influence-operation narrative pressure around
@@ -56,6 +70,39 @@ Finland/Baltic keywords via GDELT (news volume + tone) — the same mechanism
 as domain 1, a separate query, separate series, its own two-component index.
 See METHODOLOGY.md for the full formula and why EUvsDisinfo (the obvious
 EU-official secondary source) isn't integrated yet.
+
+## Domain 4 — Civic & critical infrastructure
+
+Tracks cyberattack/energy/water/telecom-disruption pressure around
+Finland/Baltic keywords, same GDELT two-component shape as domains 1/3.
+NCSC-FI, ENISA's EUVD, and CERT-EU advisory feeds are logged alongside it as
+headlines (shown, not scored); Fingrid's power-system-state data is polled
+but not yet wired in. See METHODOLOGY.md for the full formula and source
+verification notes. No frontend deep-dive yet (see below).
+
+## Domain 5 — Social stability
+
+Tracks polarization/unrest pressure around Finland/Baltic keywords via
+GDELT, combined with Statistics Finland's monthly Consumer Confidence
+Indicator — the first domain to score an official statistic directly into
+the index rather than only showing it alongside. See METHODOLOGY.md for the
+full formula, the placeholder confidence-normalization span, and why
+Eurobarometer/Eurofound/Findikaattori/Poliisi.fi weren't integrated. No
+frontend deep-dive yet (see below).
+
+## Domain 6 — Environmental & climate security
+
+Tracks wildfire/drought/extreme-weather pressure around Finland/Baltic
+keywords via GDELT, combined with NASA FIRMS's active-fire hotspot count
+over a Finland+Baltic bounding box — the second domain (after domain 5) to
+score a real external source directly into the index rather than only
+showing it alongside. Meteoalarm's per-country severe-weather Atom feeds
+(Finland/Estonia/Latvia/Lithuania) are logged as advisory headlines (shown,
+not scored). The fire-hotspot signal (F) requires a free
+`FIRMS_MAP_KEY` — without it the index still computes from V/T alone. See
+METHODOLOGY.md for the full formula and the four research passes behind it
+(FMI/EFFIS/Copernicus C3S/EMSA/NOAA/ESA all checked and rejected as *feeds*,
+not as concepts), and ROADMAP.md for the EFFIS/Copernicus fast-follow ideas.
 
 ## Architecture
 

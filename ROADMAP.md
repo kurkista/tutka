@@ -1,71 +1,105 @@
-# tutka roadmap — scouted domains, not yet built
+# tutka roadmap — fast-follow ideas for built domains
 
-This documents the domains identified alongside domains 1 (State & military
-tension — Nordic/Baltic-Russia, built) and 3 (Information environment, built)
-so the taxonomy work isn't lost, even though only two domains are actually
-implemented. Each entry is scoped at
-"what data sources exist and roughly what the index would measure" — not
-implementation detail. See [README.md](README.md) for the full six-domain
-table and [METHODOLOGY.md](METHODOLOGY.md) for how the built domains work.
+All six domains are now built (see [README.md](README.md) for the full
+table and [METHODOLOGY.md](METHODOLOGY.md) for how each one works). This
+file no longer tracks unbuilt domains — it tracks the follow-up upgrades
+that research turned up but weren't worth building in the same pass, so the
+work isn't lost.
 
-## Domain 2 — Hybrid & grey-zone threats
+## Domain 2 follow-up — build our own intel source
 
-GPS jamming, undersea cable/pipeline sabotage, drone incursions, and
-instrumentalized migration at Finland's eastern border. Deferred because it
-needs entirely new data sourcing (nothing here reuses domain 1 or 3's code):
+Domain 2 (Hybrid & grey-zone threats: GPS/GNSS jamming, undersea
+cable/pipeline sabotage, drone incursions, instrumentalized migration at
+the eastern border) shipped as `hybrid-v0` with the weakest sourcing of any
+built domain: a GDELT news V/T pair plus one keyword-filtered advisory RSS
+feed (Rajavartiolaitos), no third scored component. Two research passes
+(2026-07-25) checked not just Finland's own sources but what Sweden,
+Estonia, NATO, the EU, and even Ukraine publish in these threat
+categories — see METHODOLOGY.md's Domain 2 section for the full source
+list. The finding: **this isn't a gap that more searching will fix.** No
+Baltic state, NATO, or the EU publishes structured, machine-readable data
+for cable/pipeline sabotage or border incidents — it's closed by design
+region-wide (Finland's own border opacity is a stated
+operational-security policy, on the record, not an oversight). The
+realistic path to strengthening domain 2 is **building tutka's own
+signal(s) instead of waiting for a feed that doesn't exist.** Two concrete
+candidates, in rough priority order:
 
-- **Traficom** (Finnish Transport and Communications Agency) publishes GPS/GNSS
-  interference advisories — needs checking for a structured feed vs. only
-  human-readable bulletins.
-- **Rajavartiolaitos** (Finnish Border Guard) press releases — RSS likely
-  available, would need keyword/incident-type filtering.
-- **NATO/Baltic states cable-incident reporting** — ad hoc, sourced from
-  official statements as incidents occur rather than a single feed; likely the
-  hardest of the four to make into a clean recurring poller.
+1. **AIS cable-route anomaly detector.** Loitering, course-change, and
+   AIS-gap ("dark vessel") detection over the known Baltic cable/pipeline
+   routes (C-Lion1, Balticconnector, Estlink), reusing tutka's existing
+   live AIS ingestion (currently shown-not-scored for domain 1) — the same
+   maritime-domain-awareness approach NATO's Nordic Warden and Baltic
+   Sentry run internally, just self-built instead of closed. Confirmed via
+   reading `server/vessels.js`: the current `VesselStore` is a pure
+   in-memory position/gate-crossing tracker with no route-proximity or
+   loitering logic today, so this is real new engineering — route
+   geometry data, proximity/loitering scoring, likely new persistent
+   state — not a quick add.
+2. **In-house GNSS-jamming proxy.** `adsb.fi` (EU/Finnish-run open ADS-B
+   data, github.com/adsbfi/opendata) as a free alternative to computing a
+   jamming-anomaly signal in-house, instead of depending on FlySafe.zone
+   (a UAE-based commercial reseller of the same underlying GPSJam/ADS-B
+   Exchange data). Flagged as unverified/needs a dedicated feasibility
+   look — not yet confirmed production-ready.
 
-Highest editorial risk of the four remaining domains: incidents are
-individually reported, not published as a continuous series, so the index
-shape (if one is built at all) may end up closer to an event log with
-severity tagging than a HPI/infoenv-style weighted score.
+## Domain 6 follow-up — EFFIS/Copernicus fire-danger, once feasible
 
-## Domain 4 — Civic & critical infrastructure
+Domain 6 (Environmental & climate security) shipped as `climate-v0` with a
+GDELT V/T pair, NASA FIRMS's active-fire hotspot count as a third scored
+component, and Meteoalarm as an advisory feed. Two sources were checked and
+rejected only for *effort*, not because they're closed — worth revisiting
+if a lightweight way to use them ever exists:
 
-Cyberattacks, energy/water/telecom disruptions.
+1. **EFFIS Fire Danger Forecast (FWI/KBDI/MARK-5/NFDRS)** — real EU data,
+   updated daily, but WMS map-tile only, no JSON/download endpoint.
+   Scrapeable via `GetFeatureInfo` pixel queries against known Finland/
+   Baltic coordinates — flagged as unverified/needs a feasibility look, not
+   yet confirmed production-ready as a clean poller.
+2. **Copernicus C3S Fire Weather Index** — needs a CDS account (free,
+   EU-based) and delivers gridded NetCDF/GRIB; a real GIS/xarray processing
+   step to extract a single Finland-region value. Worth another look if a
+   lightweight extraction approach (e.g. a pre-built Copernicus CDS
+   "toolbox" recipe) turns up later.
 
-- **NCSC-FI (Kyberturvallisuuskeskus)** — publishes cyber threat advisories;
-  likely has RSS.
-- **ENISA** — EU-level threat landscape reports and advisories, free, EU-official.
+## Domain 2 follow-up — build our own intel source
 
-Likely buildable as a GDELT-style volume/tone poller (like domain 3) if a
-useful keyword query can be constructed, plus the advisory feeds as
-hand-logged or lightly-parsed events.
+Domain 2 (Hybrid & grey-zone threats: GPS/GNSS jamming, undersea
+cable/pipeline sabotage, drone incursions, instrumentalized migration at
+the eastern border) shipped as `hybrid-v0` with the weakest sourcing of any
+built domain: a GDELT news V/T pair plus one keyword-filtered advisory RSS
+feed (Rajavartiolaitos), no third scored component. Two research passes
+(2026-07-25) checked not just Finland's own sources but what Sweden,
+Estonia, NATO, the EU, and even Ukraine publish in these threat
+categories — see METHODOLOGY.md's Domain 2 section for the full source
+list. The finding: **this isn't a gap that more searching will fix.** No
+Baltic state, NATO, or the EU publishes structured, machine-readable data
+for cable/pipeline sabotage or border incidents — it's closed by design
+region-wide (Finland's own border opacity is a stated
+operational-security policy, on the record, not an oversight). The
+realistic path to strengthening domain 2 is **building tutka's own
+signal(s) instead of waiting for a feed that doesn't exist.** Two concrete
+candidates, in rough priority order:
 
-## Domain 5 — Social stability
+1. **AIS cable-route anomaly detector.** Loitering, course-change, and
+   AIS-gap ("dark vessel") detection over the known Baltic cable/pipeline
+   routes (C-Lion1, Balticconnector, Estlink), reusing tutka's existing
+   live AIS ingestion (currently shown-not-scored for domain 1) — the same
+   maritime-domain-awareness approach NATO's Nordic Warden and Baltic
+   Sentry run internally, just self-built instead of closed. Confirmed via
+   reading `server/vessels.js`: the current `VesselStore` is a pure
+   in-memory position/gate-crossing tracker with no route-proximity or
+   loitering logic today, so this is real new engineering — route
+   geometry data, proximity/loitering scoring, likely new persistent
+   state — not a quick add.
+2. **In-house GNSS-jamming proxy.** `adsb.fi` (EU/Finnish-run open ADS-B
+   data, github.com/adsbfi/opendata) as a free alternative to computing a
+   jamming-anomaly signal in-house, instead of depending on FlySafe.zone
+   (a UAE-based commercial reseller of the same underlying GPSJam/ADS-B
+   Exchange data). Flagged as unverified/needs a dedicated feasibility
+   look — not yet confirmed production-ready.
 
-Polarization, public trust, unrest.
-
-- **Eurobarometer** — EU-official survey data on public trust/attitudes, free,
-  but low-frequency (survey waves, not continuous).
-- **Statistics Finland PxWeb** — already integrated (`server/config.js`'s
-  `STATFIN`, used by the Hilkka/Finland-impact panel) — the same
-  slow-official-statistic pattern extends naturally here (e.g. consumer
-  confidence, if StatFin publishes it).
-
-Best fit for the "fast proxy vs. slow official statistic" pattern already
-proven in domain 1's Finland-impact panel, rather than a GDELT-style news
-poller — the interesting signal here is lagging survey data, not news volume.
-
-## Domain 6 — Environmental & climate security
-
-Lowest priority; may fold into domain 4 rather than standing alone.
-
-- **FMI (Finnish Meteorological Institute) open data** — free, official.
-- **Copernicus/EFFIS** (EU wildfire/environmental monitoring) — free, EU-official.
-
-Not scoped further until domains 2/4/5 are further along — revisit whether
-this deserves its own index or is better as a data layer feeding domain 4.
-
-## Cross-cutting notes for whoever builds the next domain
+## Cross-cutting notes for whoever touches the frontend next
 
 - Reuse `server/indices/engine.js` for the weighted-scoring/hysteresis-banding
   math; write only the domain's own component-scoring functions (see
@@ -76,6 +110,5 @@ this deserves its own index or is better as a data layer feeding domain 4.
   domain 1's vessels/transits, which are Hormuz-specific and don't generalize).
 - If a domain reuses GDELT, follow the `config.js` `GDELT.modules` /
   `server/pollers/gdelt.js` pattern — add a config block, not a new file.
-- Frontend/UI work for any new domain is out of scope until the UI pass that
-  covers domains 1 and 3 together happens first (see README.md's frontend
-  note).
+- Frontend/UI work is out of scope until the UI pass that covers domains 1,
+  2, 3, 4, 5, and 6 together happens first (see README.md's frontend note).
