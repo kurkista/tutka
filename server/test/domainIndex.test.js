@@ -3,7 +3,7 @@
 // so the DB-reading half that v0's per-domain tests never touched is covered.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { openDb, putSeries } from '../db.js';
+import { openDb, putSeries, putIndexSnapshot, latestIndexSnapshot } from '../db.js';
 import { makeDomainIndex } from '../indices/domainIndex.js';
 import { DEVIATION, DEVIATION_BANDS } from '../config.js';
 
@@ -142,4 +142,35 @@ test('bands read 0 = NORMAL, high = unusual (v1 direction flip)', () => {
   const mins = DEVIATION_BANDS.map((b) => b.min);
   assert.deepEqual(mins, [...mins].sort((a, b) => b - a));
   assert.equal(DEVIATION_BANDS[DEVIATION_BANDS.length - 1].min, 0);
+});
+
+test('a retired formula\'s snapshot never resurfaces as the current reading', () => {
+  // Shipped bug, caught in production: after the v0 → v1 deploy, four domains
+  // could no longer be scored (too little history for a baseline), so nothing
+  // new was persisted — and /api/state kept serving their last v0 row for
+  // hours. Climate's false ELEVATED outlived the formula that produced it.
+  putIndexSnapshot('retired', {
+    ts: now - HOUR, value: 92, band: 'CALM', components: {}, version: 'test-v0',
+  });
+
+  assert.equal(latestIndexSnapshot('retired', 'test-v0')?.value, 92, 'v0 row is still on disk');
+  assert.equal(latestIndexSnapshot('retired', 'test-v1'), undefined, 'but v1 must not adopt it');
+  assert.equal(latestIndexSnapshot('retired')?.value, 92, 'unversioned read is unchanged (export path)');
+});
+
+test('hysteresis does not carry a band across a version bump', () => {
+  // Same root cause, other half: prevBand came from an unversioned read, so
+  // v0's CALM would have anchored v1's first reading for its first cycles.
+  seed('bump_vol', 240, (i) => 100 + (i % 7) * 3);
+  seed('bump_tone', 240, (i) => -2 + (i % 5) * 0.1);
+  putIndexSnapshot('bump', {
+    ts: now - HOUR, value: 95, band: 'CALM', components: {}, version: 'test-v0',
+  });
+
+  const s = makeIdx('bump', 'bump_vol', 'bump_tone').gatherAndCompute(now);
+  assert.ok(s);
+  assert.ok(
+    DEVIATION_BANDS.some((b) => b.name === s.band),
+    `band ${s.band} leaked in from the retired v0 vocabulary`,
+  );
 });

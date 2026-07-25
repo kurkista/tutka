@@ -5,7 +5,10 @@ import express from 'express';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PUBLIC_METRICS, SSE, GDELT } from './config.js';
+import {
+  PUBLIC_METRICS, SSE, GDELT,
+  NORDIC, INFOENV, INFRA, SOCIAL, HYBRID, CLIMATE,
+} from './config.js';
 import {
   latestSeries, seriesSince, latestIndexSnapshot, recentHeadlines,
   vesselsDailySince, transitsSince,
@@ -72,7 +75,7 @@ export function startHttp({ store }) {
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
     });
-    const hello = latestIndexSnapshot('nordic');
+    const hello = latestIndexSnapshot('nordic', NORDIC.version);
     res.write(`event: hello\ndata: ${JSON.stringify({ ts: Date.now(), value: hello?.value ?? null, band: hello?.band ?? null })}\n\n`);
     clients.add(res);
     req.on('close', () => clients.delete(res));
@@ -102,7 +105,7 @@ export function startHttp({ store }) {
       metrics,
       modules: {
         nordic: {
-          index: latestIndexSnapshot('nordic') ?? null,
+          index: latestIndexSnapshot('nordic', NORDIC.version) ?? null,
           vessels: store.snapshot(),
           uniqueLargeToday: store.uniqueLargeToday(),
           headlines: recentHeadlines(20, 'nordic'),
@@ -111,26 +114,26 @@ export function startHttp({ store }) {
           ais: aisStatus(),
         },
         infoenv: {
-          index: latestIndexSnapshot('infoenv') ?? null,
+          index: latestIndexSnapshot('infoenv', INFOENV.version) ?? null,
           headlines: recentHeadlines(20, 'infoenv'),
           events: events.infoenv,
         },
         infra: {
-          index: latestIndexSnapshot('infra') ?? null,
+          index: latestIndexSnapshot('infra', INFRA.version) ?? null,
           headlines: recentHeadlines(20, 'infra'),
           advisories: recentHeadlines(20, 'infra_advisory'),
         },
         social: {
-          index: latestIndexSnapshot('social') ?? null,
+          index: latestIndexSnapshot('social', SOCIAL.version) ?? null,
           headlines: recentHeadlines(20, 'social'),
         },
         hybrid: {
-          index: latestIndexSnapshot('hybrid') ?? null,
+          index: latestIndexSnapshot('hybrid', HYBRID.version) ?? null,
           headlines: recentHeadlines(20, 'hybrid'),
           advisories: recentHeadlines(20, 'hybrid_advisory'),
         },
         climate: {
-          index: latestIndexSnapshot('climate') ?? null,
+          index: latestIndexSnapshot('climate', CLIMATE.version) ?? null,
           headlines: recentHeadlines(20, 'climate'),
           advisories: recentHeadlines(20, 'climate_advisory'),
         },
@@ -226,7 +229,7 @@ export function startHttp({ store }) {
       generated: new Date().toISOString(),
       daily,
       vesselsDaily: vesselsDailySince(new Date(since).toISOString().slice(0, 10)),
-      latestNordic: latestIndexSnapshot('nordic') ?? null,
+      latestNordic: latestIndexSnapshot('nordic', NORDIC.version) ?? null,
       latestHpi: latestHpiSnapshot() ?? null, // dormant, kept for historical continuity
       headlines: recentHeadlines(100),
     });

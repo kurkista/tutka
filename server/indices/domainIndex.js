@@ -132,7 +132,10 @@ export function makeDomainIndex({ name, config, components }) {
 
   /** Computes, persists on band change or cadence, and broadcasts. */
   function gatherAndCompute(now = Date.now()) {
-    const prev = latestIndexSnapshot(name);
+    // Version-scoped: hysteresis anchors the new reading to the previous band,
+    // and bands from a retired formula mean something different. v0's CALM
+    // would otherwise hold a v1 reading down for its first cycles.
+    const prev = latestIndexSnapshot(name, config.version);
     const snapshot = compute(now, prev?.band ?? null);
     if (!snapshot) return null; // nothing scoreable — no index rather than a lie
 

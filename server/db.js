@@ -200,10 +200,25 @@ export function putIndexSnapshot(indexName, s) {
   ).run(indexName, s.ts, s.value, s.band, JSON.stringify(s.components), s.version);
 }
 
-/** @param {string} indexName @returns {any | undefined} */
-export function latestIndexSnapshot(indexName) {
+/**
+ * Latest stored snapshot for a domain.
+ *
+ * Pass `version` and rows written by a retired formula are ignored. Without
+ * it, a domain that can no longer be scored keeps serving its last reading
+ * from the *old* formula forever — which is how the v1 deploy left four
+ * domains showing v0 CALM (and climate's false ELEVATED) while the live
+ * engine was correctly returning null for all of them. A retired formula's
+ * verdict must retire with it; "no reading yet" is the honest answer.
+ *
+ * @param {string} indexName e.g. 'nordic'
+ * @param {string} [version] current config version, e.g. 'nordic-v1'
+ * @returns {any | undefined}
+ */
+export function latestIndexSnapshot(indexName, version) {
   const row = /** @type {any} */ (
-    db.prepare('SELECT * FROM index_snapshots WHERE index_name = ? ORDER BY ts DESC LIMIT 1').get(indexName)
+    version
+      ? db.prepare('SELECT * FROM index_snapshots WHERE index_name = ? AND version = ? ORDER BY ts DESC LIMIT 1').get(indexName, version)
+      : db.prepare('SELECT * FROM index_snapshots WHERE index_name = ? ORDER BY ts DESC LIMIT 1').get(indexName)
   );
   if (row) row.components = JSON.parse(row.components);
   return row;
