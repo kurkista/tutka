@@ -23,6 +23,7 @@ import { gatherAndComputeInfoEnv } from './indices/infoenv.js';
 import { gatherAndComputeInfra } from './indices/infra.js';
 import { gatherAndComputeSocial } from './indices/social.js';
 import { gatherAndComputeHybrid } from './indices/hybrid.js';
+import { gatherAndComputeClimate } from './indices/climate.js';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 /** @type {{hormuz: any[], nordic: any[], infoenv: any[]}} */
@@ -60,7 +61,7 @@ export function startHttp({ store }) {
     for (const res of clients) res.write(': ping\n\n');
   }, SSE.pingMs).unref?.();
 
-  for (const event of ['vessels', 'transit', 'nordic_index', 'infoenv_index', 'infra_index', 'social_index', 'hybrid_index', 'metric', 'headline', 'flights']) {
+  for (const event of ['vessels', 'transit', 'nordic_index', 'infoenv_index', 'infra_index', 'social_index', 'hybrid_index', 'climate_index', 'metric', 'headline', 'flights']) {
     bus.on(event, (data) => broadcast(event, data));
   }
 
@@ -127,6 +128,11 @@ export function startHttp({ store }) {
           headlines: recentHeadlines(20, 'hybrid'),
           advisories: recentHeadlines(20, 'hybrid_advisory'),
         },
+        climate: {
+          index: latestIndexSnapshot('climate') ?? null,
+          headlines: recentHeadlines(20, 'climate'),
+          advisories: recentHeadlines(20, 'climate_advisory'),
+        },
       },
     });
   });
@@ -181,6 +187,7 @@ export function startHttp({ store }) {
       if (cfg.module === 'infra') gatherAndComputeInfra();
       if (cfg.module === 'social') gatherAndComputeSocial();
       if (cfg.module === 'hybrid') gatherAndComputeHybrid();
+      if (cfg.module === 'climate') gatherAndComputeClimate();
       console.log(`[ingest] gdelt relay (${cfg.module}) stored: ${stored.join(', ')}`);
       res.json({ ok: true, stored });
     } catch (err) {
@@ -192,7 +199,7 @@ export function startHttp({ store }) {
     res.type('text/markdown').send(readFileSync(path.join(root, 'METHODOLOGY.md'), 'utf8'));
   });
 
-  // Domain 6 has no built deep-dive yet; the frontend fetches this once and
+  // No domain has a built deep-dive yet; the frontend fetches this once and
   // splits it client-side on its "## Domain N —" headings.
   app.get('/api/roadmap', (req, res) => {
     res.type('text/markdown').send(readFileSync(path.join(root, 'ROADMAP.md'), 'utf8'));

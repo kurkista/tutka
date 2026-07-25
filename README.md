@@ -13,9 +13,10 @@ Nordic/Baltic tension. The project (repo and live app) has since been renamed
 Domain 1 was originally built as a Hormuz-only monitor, then rebuilt to
 track Nordic/Baltic-Russia tension instead — Hormuz's own working code and
 data stay in the repo (dormant, not deleted; see below), but no longer
-drive the live app. Domains 2, 3, 4, and 5 followed the same GDELT-backed
-weighted-index shape. See **[ROADMAP.md](ROADMAP.md)** for what's still
-scouted-but-not-built.
+drive the live app. Domains 2, 3, 4, 5, and 6 followed the same GDELT-backed
+weighted-index shape. All six domains are now built — see
+**[ROADMAP.md](ROADMAP.md)** for fast-follow upgrade ideas that didn't make
+the first pass.
 
 | # | Domain | What it tracks | Status |
 |---|---|---|---|
@@ -24,7 +25,7 @@ scouted-but-not-built.
 | 3 | Information environment | Disinformation / influence-operation narrative pressure | **Built** |
 | 4 | Civic & critical infrastructure | Cyberattacks, energy/water/telecom disruptions | **Built** (backend; no deep-dive UI yet) |
 | 5 | Social stability | Polarization, public trust, unrest | **Built** (backend; no deep-dive UI yet) |
-| 6 | Environmental & climate security | — | Scouted (ROADMAP.md), may fold into #4 |
+| 6 | Environmental & climate security | Wildfire/drought/extreme-weather pressure, active-fire hotspots | **Built** (backend; no deep-dive UI yet) |
 
 Every domain's index is versioned and fully explained in
 **[METHODOLOGY.md](METHODOLOGY.md)** (also rendered inside the app).
@@ -88,6 +89,20 @@ the index rather than only showing it alongside. See METHODOLOGY.md for the
 full formula, the placeholder confidence-normalization span, and why
 Eurobarometer/Eurofound/Findikaattori/Poliisi.fi weren't integrated. No
 frontend deep-dive yet (see below).
+
+## Domain 6 — Environmental & climate security
+
+Tracks wildfire/drought/extreme-weather pressure around Finland/Baltic
+keywords via GDELT, combined with NASA FIRMS's active-fire hotspot count
+over a Finland+Baltic bounding box — the second domain (after domain 5) to
+score a real external source directly into the index rather than only
+showing it alongside. Meteoalarm's per-country severe-weather Atom feeds
+(Finland/Estonia/Latvia/Lithuania) are logged as advisory headlines (shown,
+not scored). The fire-hotspot signal (F) requires a free
+`FIRMS_MAP_KEY` — without it the index still computes from V/T alone. See
+METHODOLOGY.md for the full formula and the four research passes behind it
+(FMI/EFFIS/Copernicus C3S/EMSA/NOAA/ESA all checked and rejected as *feeds*,
+not as concepts), and ROADMAP.md for the EFFIS/Copernicus fast-follow ideas.
 
 ## Architecture
 

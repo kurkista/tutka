@@ -362,6 +362,133 @@ genuinely differentiated signal available, scoped there as future work.
 
 ---
 
+## Domain 6 — Environmental & climate security
+
+*Version: **climate-v0***
+
+Tracks wildfire/drought/extreme-weather pressure around Finland/Baltic
+keywords, combined with NASA FIRMS's active-fire hotspot count — like domain
+5, this domain gets a third, genuinely independent component scored directly
+into the index, not just shown alongside it, after four research passes
+found no honest way to avoid it (see "Sources evaluated and rejected"
+below).
+
+### The index
+
+`climate = 0.4·V + 0.3·T + 0.3·F`
+
+| | Component | Input | Normalization |
+|---|---|---|---|
+| **V** | News volume (40%) | GDELT 24 h article volume for `(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (wildfire OR "forest fire" OR drought OR heatwave OR flooding OR "storm damage" OR "extreme weather" OR "grid resilience")` vs the median daily volume of calendar 2025 | Same log10 formula as domains 1/3/4/5/2. |
+| **T** | Tone stress (30%) | GDELT 24 h average tone for the same query | Same formula as domains 1/3/4/5/2. |
+| **F** | Active-fire pressure (30%) | NASA FIRMS Area API — VIIRS active-fire/hotspot detections within a Finland + Baltic-states bounding box (20°E–32°E, 53°N–70.5°N), 1-day window | `100 − clamp(hotspotCount × 5, 0, 100)` — 0 hotspots scores 100, 20+ scores 0. Placeholder scale, see below. |
+
+**Bands:** ≥ 70 **CALM** · 45–69 **ELEVATED** · 20–44 **STRAINED** · < 20
+**CRITICAL** — same names as domains 2/4/5.
+
+**Staleness handling:** V: 3h, T: 24h, F: 24h (FIRMS's NRT products are
+typically <1h latency, but a full day's slack absorbs pass gaps for a
+1-day-window bounding-box query).
+
+### Component F's normalization scale is a placeholder
+
+`scorePerHotspot = 5` (in `FIRMS` config, `server/config.js`) is a
+reasonable-looking starting scale, not a fitted calibration — Finland/Baltic
+wildfire activity is low most of the year, so the index will mostly read
+F ≈ 100 (zero hotspots) outside dry summer periods. Revisit the scale once
+the poller has run through at least one real fire season, same caveat as
+domain 5's confidence-span placeholder.
+
+### F requires a free API key to activate
+
+Unlike every other component in this project, F needs a registered NASA
+FIRMS `MAP_KEY` (`FIRMS_MAP_KEY` env var / Fly secret) — self-service, free,
+no approval wait, at https://firms.modaps.eosdis.nasa.gov/api/map_key/.
+Without it, the poller no-ops with a startup warning and F is simply absent
+from the weighted average (renormalized to V/T), same "optional key"
+pattern as `AISSTREAM_API_KEY`.
+
+### Advisory feed (shown, not scored)
+
+**Meteoalarm** — per-country CAP-derived Atom feeds of active severe-weather
+warnings for Finland, Estonia, Latvia, and Lithuania, confirmed live
+2026-07-26 (`feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-{country}`,
+all HTTP 200). No auth, no category filtering needed (the feed is already
+scoped to severe-weather warnings only) — logged under `climate_advisory`,
+each headline prefixed with its source country, same "shown, not scored"
+treatment as domain 4's NCSC-FI/EUVD/CERT-EU feeds and domain 2's
+Rajavartiolaitos feed.
+
+### Sources evaluated and rejected as automatable feeds
+
+Four research passes (2026-07-25/26) checked this domain's candidate
+sources, ending with a dedicated pass on NASA/ESA/NOAA specifically because
+the first pass came back thinner than domain 5's:
+
+- **FMI (Finnish Meteorological Institute) open data** — free, no auth, but
+  only raw weather observations/forecasts via `opendata.fmi.fi`'s WFS. Its
+  actual forest-fire warning index (*metsäpalovaroitus*) was checked
+  directly against `listStoredQueries` (not assumed from documentation): no
+  such stored query exists. It's disseminated only via FMI's warnings
+  webpage/map, finalized by a duty meteorologist — no export.
+- **EFFIS** (EU Forest Fire Information System) — burnt-area history is
+  downloadable (Shapefile/SpatiaLite), but that's retrospective. The
+  actually-useful layer, the daily Fire Danger Forecast (FWI/KBDI/MARK-5/
+  NFDRS), is **WMS map-tile only** — scrapeable via `GetFeatureInfo` pixel
+  queries, but that's a hack, not a clean feed.
+- **Copernicus C3S** (Climate Data Store Fire Weather Index) — real EU data,
+  but requires a CDS account/API key and delivers gridded NetCDF/GRIB;
+  extracting "today's value for Finland" needs real GIS/xarray processing,
+  disproportionate for a $2/mo hobby stack.
+- **EMSA CleanSeaNet** (Baltic oil-spill satellite detection) — real-time
+  detections go only to national competent authorities via a gated
+  interface; the only public artifact is an annual retrospective ZIP of
+  aggregate detections, not a live feed. Same dead-end shape as domain 2's
+  cable-incident sources.
+- **NOAA** — dead end. Drought.gov's API delivers raster (GeoTIFF/XYZ tile)
+  products despite looking like an API — the same trap as C3S. Climate
+  Prediction Center coverage is practically US-only in practice. Also
+  US-based, against this project's EU-preference regardless.
+- **ESA / Copernicus Data Space Ecosystem** (STAC/openEO/Sentinel Hub) —
+  real EU infrastructure, but it's raw/derived satellite *access*, not a
+  pre-computed simple index; getting a usable number out requires real
+  remote-sensing processing (openEO scripts, band math), same barrier as
+  C3S. No lightweight ESA-run derived-index product was found.
+- **Comparative agencies** (Sweden's MSB, Estonia's Rescue Board, NATO's
+  Climate Change and Security Centre, Finland's Huoltovarmuuskeskus/NESA) —
+  none publish a structured, pollable feed. MSB runs a genuine open GIS
+  hazard-map tool, but it's Sweden-domestic, not this cross-border shape;
+  the rest publish only periodic reports or policy papers.
+- **NASA FIRMS** — the one genuine win, and the source of component F
+  above: a free self-service API key, plain CSV over HTTP, no GIS
+  processing. US-based (flagged against the EU-preference rule), but no
+  EU equivalent exists at this simplicity — EFFIS's own hotspot layer has
+  the same WMS-only problem as its fire-danger layer.
+
+The underlying security linkage is real, not invented for this domain:
+Finland's own climate-adaptation reporting names grid resilience and dam
+safety as adaptation concerns under the Electricity Market Act, drought
+impact on hydropower is directly studied for the Finnish energy system, and
+wildfire-as-blackout-cause is an active research area internationally. What
+doesn't exist is a structured feed connecting weather/fire conditions to
+infrastructure impact at Finland/Baltic granularity — same split domain 2
+found between "real threat category" and "no data for it," except here
+FIRMS closes enough of the gap to earn a scored component instead of only
+an advisory one.
+
+See ROADMAP.md for the EFFIS-WMS-scraping and Copernicus-C3S fast-follow
+candidates this pointed to instead, mirroring domain 2's AIS cable-anomaly
+follow-up.
+
+### Changelog
+
+- **climate-v0** (2026-07-26) — first release. V/T = same GDELT shape as
+  domains 1/2/3/4/5; F = NASA FIRMS active-fire hotspot count, placeholder
+  linear-falloff scoring; Meteoalarm's four country Atom feeds wired as a
+  shown-not-scored advisory feed. F requires `FIRMS_MAP_KEY` to activate.
+
+---
+
 ## Appendix — the dormant Hormuz Passability Index
 
 *Version: **hpi-v0** (frozen; not actively computed)*
