@@ -224,6 +224,16 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
 .headlines a:hover { color: var(--ink); text-decoration: underline; }
 .headlines .src { color: var(--muted); font-size: 11px; display: block; margin-top: 2px; }
 
+.headline-chip {
+  border-left: 3px solid var(--chip-color, var(--muted));
+  padding-left: 8px !important;
+  background: color-mix(in srgb, var(--chip-color, var(--muted)) 6%, transparent);
+}
+
+.vt-chart { height: 90px; margin: 6px 0; }
+.mini-sparkline { height: 40px; margin-top: 4px; }
+.hotspot-map { height: 220px; border-radius: 8px; overflow: hidden; position: relative; }
+
 .fineprint { font-size: 11.5px; color: var(--muted); margin: 6px 0 0; }
 .fineprint a { color: var(--muted); }
 .muted { color: var(--muted); }

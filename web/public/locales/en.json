@@ -57,6 +57,7 @@
   "fingrid.shortage.shortage": "Shortage",
   "social.confidence": "Statistics Finland consumer confidence, {month}",
   "climate.hotspots": "NASA FIRMS active-fire hotspots",
+  "climate.hotspotMap": "Active-fire hotspots",
   "ais.disabled": "Live AIS layer is off (no API key configured)",
   "ais.noCoverage": "AIS stream connected, but no terrestrial receivers are reporting from this region right now.",
   "ais.reconnecting": "AIS stream reconnecting…",

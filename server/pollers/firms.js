@@ -7,6 +7,16 @@ import { FIRMS } from '../config.js';
 import { putSeries } from '../db.js';
 import { bus } from '../bus.js';
 
+// In-memory only (not persisted) — the map just needs "latest known dots",
+// same shown-not-scored reasoning as the live AIS/flight layers. Resets on
+// restart until the next poll cycle refills it.
+/** @type {{ ts: number, points: Array<{lat: number, lon: number}> }} */
+let latestHotspots = { ts: 0, points: [] };
+
+export function getLatestHotspots() {
+  return latestHotspots;
+}
+
 export async function pollFirms() {
   if (!FIRMS.mapKey) return 0; // guarded by index.js's registration check; safe no-op either way
 
@@ -18,9 +28,19 @@ export async function pollFirms() {
   const lines = text.trim().split('\n').filter(Boolean);
   // First line is the CSV header; anything else means "no fires" or an
   // inline error message from FIRMS (e.g. an invalid key) rather than data.
-  const count = lines.length > 1 && /^latitude,/i.test(lines[0]) ? lines.length - 1 : 0;
+  const isData = lines.length > 1 && /^latitude,/i.test(lines[0]);
+  const count = isData ? lines.length - 1 : 0;
 
   const now = Date.now();
+  // latitude,longitude are always the first two CSV columns in FIRMS's Area API.
+  const points = isData
+    ? lines.slice(1).map((line) => {
+        const [lat, lon] = line.split(',');
+        return { lat: Number(lat), lon: Number(lon) };
+      }).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon))
+    : [];
+  latestHotspots = { ts: now, points };
+
   putSeries('firms_hotspot_count', now, count);
   bus.emit('metric', { metric: 'firms_hotspot_count', ts: now, value: count });
   return count;

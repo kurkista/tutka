@@ -29,3 +29,6 @@ export const getRoadmap = async (): Promise<string> => {
   if (!res.ok) throw new Error(`roadmap: ${res.status}`);
   return res.text();
 };
+
+export const getFirmsHotspots = () =>
+  getJson<{ ts: number; points: { lat: number; lon: number }[] }>('/api/firms/hotspots');

@@ -11,7 +11,9 @@
 import type * as echarts from 'echarts/core';
 import type { GenericDomainModule, IndexSnapshot, Headline } from '../types';
 import { t, fmtNum } from '../i18n';
-import { makeGauge, setGauge, bindResize } from '../charts';
+import { makeGauge, setGauge, bindResize, makeVTSparkline } from '../charts';
+import { getSeries } from '../api';
+import { headlineChip } from '../headlineChip';
 
 export interface DomainPanelController {
   init(mod: GenericDomainModule): void;
@@ -24,13 +26,33 @@ export interface DomainPanelController {
  * @param key DOM id prefix, e.g. 'infra' → #infra-gauge, #infra-components, ...
  * @param componentKeys index component keys in display order, e.g. ['V','T'] or ['V','T','C']
  * @param hasAdvisories whether this domain has a separate #{key}-advisories list
+ * @param vtSeriesPrefix if set (e.g. 'gdelt_social_'), fetches 30d volume/tone
+ *   history and renders it into #{key}-vt-chart — only domains 3/5/6 opted
+ *   into this, see the scoped visualization-pass plan.
  */
 export function createDomainPanel(
   key: string,
   componentKeys: readonly string[],
   hasAdvisories: boolean,
+  vtSeriesPrefix?: string,
 ): DomainPanelController {
   let gauge: echarts.ECharts;
+
+  async function initVTChart(): Promise<void> {
+    if (!vtSeriesPrefix) return;
+    const el = document.getElementById(`${key}-vt-chart`);
+    if (!el) return;
+    try {
+      const [vol, tone] = await Promise.all([
+        getSeries(`${vtSeriesPrefix}vol24h`),
+        getSeries(`${vtSeriesPrefix}tone`),
+      ]);
+      const chart = makeVTSparkline(el, vol, tone);
+      bindResize(chart);
+    } catch {
+      el.innerHTML = `<p class="fineprint">${t('status.noData')}</p>`;
+    }
+  }
 
   function renderIndex(snapshot: IndexSnapshot | null): void {
     const bandEl = document.getElementById(`${key}-band`)!;
@@ -61,14 +83,14 @@ export function createDomainPanel(
     if (items.length === 0) {
       list.innerHTML = `<li class="muted">${t('news.empty')}</li>`;
     } else {
-      for (const h of items) list.appendChild(headlineLi(h));
+      for (const h of items) list.appendChild(headlineChip(h));
     }
   }
 
   function prependTo(listId: string, h: Headline): void {
     const list = document.getElementById(listId)!;
     list.querySelector('.muted')?.remove();
-    list.prepend(headlineLi(h));
+    list.prepend(headlineChip(h));
     while (list.children.length > 20) list.lastElementChild!.remove();
   }
 
@@ -79,6 +101,7 @@ export function createDomainPanel(
       bindResize(gauge);
       renderList(`${key}-headlines`, mod.headlines);
       if (hasAdvisories) renderList(`${key}-advisories`, mod.advisories ?? []);
+      void initVTChart();
     },
     onIndex(snapshot: IndexSnapshot): void {
       renderIndex(snapshot);
@@ -90,18 +113,4 @@ export function createDomainPanel(
       if (hasAdvisories) prependTo(`${key}-advisories`, h);
     },
   };
-}
-
-function headlineLi(h: Headline): HTMLLIElement {
-  const li = document.createElement('li');
-  const a = document.createElement('a');
-  a.href = h.url;
-  a.target = '_blank';
-  a.rel = 'noopener';
-  a.textContent = h.title;
-  const src = document.createElement('span');
-  src.className = 'src';
-  src.textContent = `${h.source ?? ''} · ${new Date(h.ts).toLocaleString()}`;
-  li.append(a, src);
-  return li;
 }

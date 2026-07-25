@@ -18,13 +18,13 @@ import { createDomainPanel } from './panels/domainPanel';
 import {
   initInfraExtras, onInfraMetric,
   initSocialExtras, onSocialMetric,
-  initClimateExtras, onClimateMetric,
+  initClimateExtras, onClimateMetric, resizeHotspotMap,
 } from './panels/domainExtras';
 
 const hybrid = createDomainPanel('hybrid', ['V', 'T'], true);
 const infra = createDomainPanel('infra', ['V', 'T'], true);
-const social = createDomainPanel('social', ['V', 'T', 'C'], false);
-const climate = createDomainPanel('climate', ['V', 'T', 'F'], true);
+const social = createDomainPanel('social', ['V', 'T', 'C'], false, 'gdelt_social_');
+const climate = createDomainPanel('climate', ['V', 'T', 'F'], true, 'gdelt_climate_');
 
 async function boot() {
   await initI18n();
@@ -44,8 +44,8 @@ async function boot() {
   social.init(state.modules.social);
   climate.init(state.modules.climate);
   initInfraExtras(state);
-  initSocialExtras(state);
-  initClimateExtras(state);
+  void initSocialExtras(state);
+  void initClimateExtras(state);
   initMethodology();
   welcome.init();
   initViewToggle();
@@ -130,6 +130,11 @@ async function renderRoute(): Promise<void> {
     resizeMap(); // map container may have been hidden since last resize
   } else if ([2, 3, 4, 5, 6].includes(n)) {
     document.getElementById(`domain-content-${n}`)!.hidden = false;
+    // Gauges/sparklines/the FIRMS map were all built while this container was
+    // still `hidden` (boot() runs before the router sets initial visibility),
+    // so ECharts/MapLibre measured a 0×0 box and never recovered on their own.
+    window.dispatchEvent(new Event('resize'));
+    if (n === 6) resizeHotspotMap();
   } else {
     document.getElementById('domain-content-placeholder')!.hidden = false;
     await renderPlaceholder(n);

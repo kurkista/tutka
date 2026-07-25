@@ -4,7 +4,9 @@
 import type * as echarts from 'echarts/core';
 import type { AppState, IndexSnapshot, Headline } from '../types';
 import { t, fmtNum } from '../i18n';
-import { makeGauge, setGauge, bindResize } from '../charts';
+import { makeGauge, setGauge, bindResize, makeVTSparkline } from '../charts';
+import { getSeries } from '../api';
+import { headlineChip } from '../headlineChip';
 
 const COMPONENT_KEYS = ['V', 'T'] as const;
 let gauge: echarts.ECharts;
@@ -19,7 +21,23 @@ export function init(s: AppState): void {
   if (s.modules.infoenv.headlines.length === 0) {
     list.innerHTML = `<li class="muted">${t('news.empty')}</li>`;
   } else {
-    for (const h of s.modules.infoenv.headlines) list.appendChild(headlineLi(h));
+    for (const h of s.modules.infoenv.headlines) list.appendChild(headlineChip(h));
+  }
+
+  void initVTChart();
+}
+
+async function initVTChart(): Promise<void> {
+  const el = document.getElementById('infoenv-vt-chart');
+  if (!el) return;
+  try {
+    const [vol, tone] = await Promise.all([
+      getSeries('gdelt_infoenv_vol24h'),
+      getSeries('gdelt_infoenv_tone'),
+    ]);
+    bindResize(makeVTSparkline(el, vol, tone));
+  } catch {
+    el.innerHTML = `<p class="fineprint">${t('status.noData')}</p>`;
   }
 }
 
@@ -30,7 +48,7 @@ export function onIndex(snapshot: IndexSnapshot): void {
 export function onHeadline(h: Headline): void {
   const list = document.getElementById('infoenv-headlines')!;
   list.querySelector('.muted')?.remove();
-  list.prepend(headlineLi(h));
+  list.prepend(headlineChip(h));
   while (list.children.length > 20) list.lastElementChild!.remove();
 }
 
@@ -55,18 +73,4 @@ function renderIndex(snapshot: IndexSnapshot | null): void {
     }
     list.appendChild(li);
   }
-}
-
-function headlineLi(h: Headline): HTMLLIElement {
-  const li = document.createElement('li');
-  const a = document.createElement('a');
-  a.href = h.url;
-  a.target = '_blank';
-  a.rel = 'noopener';
-  a.textContent = h.title;
-  const src = document.createElement('span');
-  src.className = 'src';
-  src.textContent = `${h.source ?? ''} · ${new Date(h.ts).toLocaleString()}`;
-  li.append(a, src);
-  return li;
 }

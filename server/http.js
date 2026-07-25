@@ -16,6 +16,7 @@ import { aisStatus } from './ais.js';
 import { bus } from './bus.js';
 import { computeHilkka } from './hilkka.js';
 import { flightsSnapshot } from './pollers/opensky.js';
+import { getLatestHotspots } from './pollers/firms.js';
 import { storeGdeltPayload } from './pollers/gdelt.js';
 import { gatherAndCompute } from './hpi.js';
 import { gatherAndComputeNordic } from './indices/nordic.js';
@@ -142,6 +143,10 @@ export function startHttp({ store }) {
     if (!PUBLIC_METRICS.includes(metric)) return res.status(404).json({ error: 'unknown metric' });
     const days = Math.min(Number(req.query.days) || 30, 400);
     res.json(seriesSince(metric, Date.now() - days * 24 * 3600_000).map((r) => [r.ts, r.value]));
+  });
+
+  app.get('/api/firms/hotspots', (req, res) => {
+    res.json(getLatestHotspots());
   });
 
   app.get('/api/transits', (req, res) => {

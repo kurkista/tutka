@@ -87,6 +87,58 @@ export function makeSparkline(el: HTMLElement, data: SeriesData, baseline: numbe
   return chart;
 }
 
+const TONE = '#c98500';
+
+/** Small two-line 30-day volume+tone trend for domains whose deep-dive was
+ * otherwise just a static gauge — V on the left axis, T (roughly 0..-10) on
+ * the right so a sudden tone drop is visible alongside a volume spike. */
+export function makeVTSparkline(el: HTMLElement, vol: SeriesData, tone: SeriesData) {
+  const chart = echarts.init(el);
+  chart.setOption({
+    grid: { left: 30, right: 30, top: 8, bottom: 18 },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#1a1a19', borderColor: GRID, textStyle: { color: INK2, fontSize: 11 },
+    },
+    xAxis: { type: 'time', ...axisBase, splitLine: { show: false } },
+    yAxis: [
+      { type: 'value', ...axisBase, axisLabel: { show: false }, splitLine: { show: false } },
+      { type: 'value', ...axisBase, axisLabel: { show: false }, splitLine: { show: false } },
+    ],
+    series: [
+      {
+        name: t('comp.V'), type: 'line', data: vol, showSymbol: false,
+        lineStyle: { color: BLUE, width: 1.6 }, itemStyle: { color: BLUE },
+        areaStyle: { color: BLUE, opacity: 0.06 },
+      },
+      {
+        name: t('comp.T'), type: 'line', yAxisIndex: 1, data: tone, showSymbol: false,
+        lineStyle: { color: TONE, width: 1.6 }, itemStyle: { color: TONE },
+      },
+    ],
+  } as any);
+  return chart;
+}
+
+export function makeSimpleSparkline(el: HTMLElement, data: SeriesData, color = BLUE) {
+  const chart = echarts.init(el);
+  chart.setOption({
+    grid: { left: 4, right: 4, top: 6, bottom: 6 },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#1a1a19', borderColor: GRID, textStyle: { color: INK2, fontSize: 11 },
+    },
+    xAxis: { type: 'time', show: false },
+    yAxis: { type: 'value', show: false, scale: true },
+    series: [{
+      type: 'line', data, showSymbol: false,
+      lineStyle: { color, width: 1.8 }, itemStyle: { color },
+      areaStyle: { color, opacity: 0.1 },
+    }],
+  } as any);
+  return chart;
+}
+
 export function makeBrentChart(el: HTMLElement, daily: SeriesData, events: DomainEvent[], lang: string) {
   const chart = echarts.init(el);
   chart.setOption({

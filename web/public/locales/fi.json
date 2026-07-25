@@ -56,6 +56,7 @@
   "fingrid.shortage.shortage": "Sähköpula",
   "social.confidence": "Tilastokeskuksen kuluttajien luottamusindikaattori, {month}",
   "climate.hotspots": "NASA FIRMS -aktiivipalot",
+  "climate.hotspotMap": "Aktiiviset palokohteet",
   "ais.disabled": "Live-AIS-taso pois päältä (API-avain puuttuu)",
   "ais.noCoverage": "AIS-yhteys toimii, mutta tämän alueen maa-asemat eivät juuri nyt raportoi.",
   "ais.reconnecting": "AIS-yhteys muodostetaan uudelleen…",
