@@ -93,6 +93,15 @@ export interface InfoenvModule {
   events: DomainEvent[];
 }
 
+/** Shared shape for domains 2/4/5/6 — a GDELT V/T index (plus an optional
+ * third scored component) and headlines; advisories only exist for domains
+ * whose independent feed is shown-not-scored (2, 4, 6 — not 5). */
+export interface GenericDomainModule {
+  index: IndexSnapshot | null;
+  headlines: Headline[];
+  advisories?: Headline[];
+}
+
 export interface AppState {
   ts: number;
   jobs: Record<string, { lastSuccess: number | null; lastError: number | null; lastErrorMsg: string | null }>;
@@ -100,6 +109,10 @@ export interface AppState {
   modules: {
     nordic: NordicModule;
     infoenv: InfoenvModule;
+    infra: GenericDomainModule;
+    social: GenericDomainModule;
+    hybrid: GenericDomainModule;
+    climate: GenericDomainModule;
   };
 }
 

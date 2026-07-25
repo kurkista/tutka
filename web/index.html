@@ -90,7 +90,7 @@
     </div>
 
     <div id="domain-content-3" class="domain-content" hidden>
-      <div id="infoenv-layout">
+      <div class="split-layout">
         <section class="panel">
           <h2 data-i18n="domain.3.name">Information environment</h2>
           <div id="infoenv-gauge" class="gauge"></div>
@@ -101,6 +101,105 @@
           <h2 data-i18n="news.title">News pressure</h2>
           <p class="fineprint" data-i18n="domain.3.explainer">How loudly world media talks about Finland/Baltic disinformation and influence-operation narratives — 24h article volume vs. a calm-2025 baseline.</p>
           <ul id="infoenv-headlines" class="headlines"></ul>
+        </section>
+      </div>
+    </div>
+
+    <div id="domain-content-2" class="domain-content" hidden>
+      <div class="split-layout">
+        <section class="panel">
+          <h2 data-i18n="domain.2.name">Hybrid &amp; grey-zone threats</h2>
+          <div id="hybrid-gauge" class="gauge"></div>
+          <ul id="hybrid-components" class="components"></ul>
+          <p class="fineprint" id="hybrid-band"></p>
+        </section>
+        <section class="panel">
+          <section>
+            <h2 data-i18n="domain.2.advisoriesTitle">Border Guard advisories</h2>
+            <p class="fineprint" data-i18n="domain.2.explainer">Rajavartiolaitos press releases on border incidents, GPS jamming, and grey-zone activity — shown, not scored (no structured feed exists yet for a fourth GDELT-independent signal).</p>
+            <ul id="hybrid-advisories" class="headlines"></ul>
+          </section>
+          <section>
+            <h2 data-i18n="news.title">News pressure</h2>
+            <ul id="hybrid-headlines" class="headlines"></ul>
+          </section>
+        </section>
+      </div>
+    </div>
+
+    <div id="domain-content-4" class="domain-content" hidden>
+      <div class="split-layout">
+        <section class="panel">
+          <section>
+            <h2 data-i18n="domain.4.name">Civic &amp; critical infrastructure</h2>
+            <div id="infra-gauge" class="gauge"></div>
+            <ul id="infra-components" class="components"></ul>
+            <p class="fineprint" id="infra-band"></p>
+          </section>
+          <section>
+            <h2 data-i18n="fingrid.title">Fingrid grid status</h2>
+            <p class="fineprint" data-i18n="fingrid.explainer">Fingrid's own real-time incident assessment — shown, not scored.</p>
+            <ul id="fingrid-status" class="layers"></ul>
+          </section>
+        </section>
+        <section class="panel">
+          <section>
+            <h2 data-i18n="domain.4.advisoriesTitle">Cyber advisories</h2>
+            <p class="fineprint" data-i18n="domain.4.explainer">NCSC-FI, CERT-EU, and ENISA EUVD advisories — shown, not scored.</p>
+            <ul id="infra-advisories" class="headlines"></ul>
+          </section>
+          <section>
+            <h2 data-i18n="news.title">News pressure</h2>
+            <ul id="infra-headlines" class="headlines"></ul>
+          </section>
+        </section>
+      </div>
+    </div>
+
+    <div id="domain-content-5" class="domain-content" hidden>
+      <div class="split-layout">
+        <section class="panel">
+          <section>
+            <h2 data-i18n="domain.5.name">Social stability</h2>
+            <div id="social-gauge" class="gauge"></div>
+            <ul id="social-components" class="components"></ul>
+            <p class="fineprint" id="social-band"></p>
+          </section>
+          <section>
+            <div id="social-confidence"></div>
+          </section>
+        </section>
+        <section class="panel">
+          <h2 data-i18n="news.title">News pressure</h2>
+          <p class="fineprint" data-i18n="domain.5.explainer">How loudly world media talks about Finland/Baltic protest and unrest — 24h article volume vs. a calm-2025 baseline, combined with Statistics Finland's consumer confidence indicator.</p>
+          <ul id="social-headlines" class="headlines"></ul>
+        </section>
+      </div>
+    </div>
+
+    <div id="domain-content-6" class="domain-content" hidden>
+      <div class="split-layout">
+        <section class="panel">
+          <section>
+            <h2 data-i18n="domain.6.name">Environmental &amp; climate security</h2>
+            <div id="climate-gauge" class="gauge"></div>
+            <ul id="climate-components" class="components"></ul>
+            <p class="fineprint" id="climate-band"></p>
+          </section>
+          <section>
+            <div id="climate-hotspots"></div>
+          </section>
+        </section>
+        <section class="panel">
+          <section>
+            <h2 data-i18n="domain.6.advisoriesTitle">Weather advisories</h2>
+            <p class="fineprint" data-i18n="domain.6.explainer">Meteoalarm severe-weather warnings for Finland, Estonia, Latvia and Lithuania, plus NASA FIRMS active-fire hotspots — shown, not scored.</p>
+            <ul id="climate-advisories" class="headlines"></ul>
+          </section>
+          <section>
+            <h2 data-i18n="news.title">News pressure</h2>
+            <ul id="climate-headlines" class="headlines"></ul>
+          </section>
         </section>
       </div>
     </div>

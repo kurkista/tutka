@@ -751,6 +751,8 @@ export const PUBLIC_METRICS = [
   'gdelt_climate_tone',
   'firms_hotspot_count',
   'climate_index',
+  'fingrid_power_system_state',
+  'fingrid_electricity_shortage_status',
   'nordic_vessels_in_zone',
   'nordic_unique_large_24h',
   'flights_count',

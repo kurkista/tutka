@@ -70,6 +70,9 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
 .band-SATURATED .band-dot { background: var(--status-critical); }
 .band-ACTIVE { border-color: var(--status-serious); }
 .band-SATURATED { border-color: var(--status-critical); }
+/* Domains 2/4/5/6 (hybrid/infra/social/climate) share this tier naming. */
+.band-STRAINED .band-dot { background: var(--status-serious); }
+.band-STRAINED { border-color: var(--status-serious); }
 /* Dormant Hormuz bands — unused live, kept in case /api/export or a future
    view ever renders them again. */
 .band-OPEN .band-dot { background: var(--status-good); }
@@ -121,9 +124,9 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
 .domain-back:hover { color: var(--ink); }
 .domain-content { flex: 1; min-height: 0; overflow-y: auto; }
 .domain-content[hidden] { display: none; }
-#infoenv-layout { display: grid; grid-template-columns: 340px 1fr; gap: 0; }
-#infoenv-layout .panel { padding: 16px; border-right: 1px solid var(--border); }
-#infoenv-layout .panel:last-child { border-right: none; }
+.split-layout { display: grid; grid-template-columns: 340px 1fr; gap: 0; }
+.split-layout .panel { padding: 16px; border-right: 1px solid var(--border); }
+.split-layout .panel:last-child { border-right: none; }
 #placeholder-body { padding: 20px; max-width: 760px; margin: 0 auto; }
 
 #layout {

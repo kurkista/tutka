@@ -99,7 +99,7 @@ candidates, in rough priority order:
    Exchange data). Flagged as unverified/needs a dedicated feasibility
    look — not yet confirmed production-ready.
 
-## Cross-cutting notes for whoever touches the frontend next
+## Cross-cutting notes for whoever adds a domain 7
 
 - Reuse `server/indices/engine.js` for the weighted-scoring/hysteresis-banding
   math; write only the domain's own component-scoring functions (see
@@ -110,5 +110,13 @@ candidates, in rough priority order:
   domain 1's vessels/transits, which are Hormuz-specific and don't generalize).
 - If a domain reuses GDELT, follow the `config.js` `GDELT.modules` /
   `server/pollers/gdelt.js` pattern — add a config block, not a new file.
-- Frontend/UI work is out of scope until the UI pass that covers domains 1,
-  2, 3, 4, 5, and 6 together happens first (see README.md's frontend note).
+- The UI pass covering domains 2/4/5/6 is done: `web/src/panels/domainPanel.ts`
+  is a generic {index, headlines, advisories?} deep-dive renderer shared by
+  all four (domain 1 keeps its own file for the map/live-layers, domain 3
+  keeps its own as the first hand-written one). A new domain fitting that
+  same shape just needs a `createDomainPanel(key, componentKeys, hasAdvisories)`
+  call in `main.ts`, a matching `domain-content-N` block in `index.html`
+  (copy domain 4's), a `live: true` row in `dashboard.ts`'s `DOMAINS`/
+  `MODULE_KEY`, and `AppState.modules` extended in `types.ts`. Anything
+  domain-specific beyond that (a Fingrid-style status widget, a scored
+  third-component stat line) goes in `web/src/panels/domainExtras.ts`.

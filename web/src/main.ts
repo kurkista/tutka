@@ -14,6 +14,17 @@ import * as timeline from './panels/timeline';
 import * as infoenv from './panels/infoenv';
 import * as dashboard from './panels/dashboard';
 import { initMethodology } from './panels/methodology';
+import { createDomainPanel } from './panels/domainPanel';
+import {
+  initInfraExtras, onInfraMetric,
+  initSocialExtras, onSocialMetric,
+  initClimateExtras, onClimateMetric,
+} from './panels/domainExtras';
+
+const hybrid = createDomainPanel('hybrid', ['V', 'T'], true);
+const infra = createDomainPanel('infra', ['V', 'T'], true);
+const social = createDomainPanel('social', ['V', 'T', 'C'], false);
+const climate = createDomainPanel('climate', ['V', 'T', 'F'], true);
 
 async function boot() {
   await initI18n();
@@ -28,6 +39,13 @@ async function boot() {
   await hilkka.init();
   await timeline.init(state);
   infoenv.init(state);
+  hybrid.init(state.modules.hybrid);
+  infra.init(state.modules.infra);
+  social.init(state.modules.social);
+  climate.init(state.modules.climate);
+  initInfraExtras(state);
+  initSocialExtras(state);
+  initClimateExtras(state);
   initMethodology();
   welcome.init();
   initViewToggle();
@@ -37,9 +55,23 @@ async function boot() {
     vessels: (delta) => { updateVessels(delta); layers.onVessels(delta); },
     nordic_index: status.onNordicIndex,
     infoenv_index: infoenv.onIndex,
-    metric: (m) => { markets.onMetric(m); hilkka.onMetric(m); layers.onMetric(m); },
+    hybrid_index: hybrid.onIndex,
+    infra_index: infra.onIndex,
+    social_index: social.onIndex,
+    climate_index: climate.onIndex,
+    metric: (m) => {
+      markets.onMetric(m); hilkka.onMetric(m); layers.onMetric(m);
+      onInfraMetric(m); onSocialMetric(m); onClimateMetric(m);
+    },
     headline: (h: Headline) => {
       if (h.module === 'infoenv') { infoenv.onHeadline(h); return; }
+      if (h.module === 'hybrid') { hybrid.onHeadline(h); return; }
+      if (h.module === 'hybrid_advisory') { hybrid.onAdvisory(h); return; }
+      if (h.module === 'infra') { infra.onHeadline(h); return; }
+      if (h.module === 'infra_advisory') { infra.onAdvisory(h); return; }
+      if (h.module === 'social') { social.onHeadline(h); return; }
+      if (h.module === 'climate') { climate.onHeadline(h); return; }
+      if (h.module === 'climate_advisory') { climate.onAdvisory(h); return; }
       markets.onHeadline(h); layers.onHeadline();
     },
     flights: (data) => { updateFlights(data); layers.onFlights(data); },
@@ -96,8 +128,8 @@ async function renderRoute(): Promise<void> {
   if (n === 1) {
     document.getElementById('domain-content-1')!.hidden = false;
     resizeMap(); // map container may have been hidden since last resize
-  } else if (n === 3) {
-    document.getElementById('domain-content-3')!.hidden = false;
+  } else if ([2, 3, 4, 5, 6].includes(n)) {
+    document.getElementById(`domain-content-${n}`)!.hidden = false;
   } else {
     document.getElementById('domain-content-placeholder')!.hidden = false;
     await renderPlaceholder(n);

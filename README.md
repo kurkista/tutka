@@ -21,11 +21,18 @@ the first pass.
 | # | Domain | What it tracks | Status |
 |---|---|---|---|
 | 1 | State & military tension | Chokepoints, troop movements, official statements — Nordic/Baltic-Russia tension is the live instance | **Built** |
-| 2 | Hybrid & grey-zone threats | GPS jamming, undersea cable/pipeline sabotage, drone incursions, border incidents | **Built** (backend; no deep-dive UI yet) |
+| 2 | Hybrid & grey-zone threats | GPS jamming, undersea cable/pipeline sabotage, drone incursions, border incidents | **Built** |
 | 3 | Information environment | Disinformation / influence-operation narrative pressure | **Built** |
-| 4 | Civic & critical infrastructure | Cyberattacks, energy/water/telecom disruptions | **Built** (backend; no deep-dive UI yet) |
-| 5 | Social stability | Polarization, public trust, unrest | **Built** (backend; no deep-dive UI yet) |
-| 6 | Environmental & climate security | Wildfire/drought/extreme-weather pressure, active-fire hotspots | **Built** (backend; no deep-dive UI yet) |
+| 4 | Civic & critical infrastructure | Cyberattacks, energy/water/telecom disruptions | **Built** |
+| 5 | Social stability | Polarization, public trust, unrest | **Built** |
+| 6 | Environmental & climate security | Wildfire/drought/extreme-weather pressure, active-fire hotspots | **Built** |
+
+All six domains now have a dashboard card and a `#domain/N` deep-dive view
+(gauge, component breakdown, headlines, and — for domains 2/4/6 — their
+advisory feed). Domains 4/5/6 also get one distinctive widget beyond the
+shared template: domain 4 shows Fingrid's grid-status traffic lights,
+domain 5 shows the latest StatFin consumer-confidence reading, domain 6
+shows the NASA FIRMS hotspot count.
 
 Every domain's index is versioned and fully explained in
 **[METHODOLOGY.md](METHODOLOGY.md)** (also rendered inside the app).
@@ -61,7 +68,6 @@ the EU publishes a structured feed for these threat categories, so there's
 no third scored component the way domain 5 got one. See METHODOLOGY.md for
 the full source-verification notes, and ROADMAP.md for a scoped "build our
 own intel source" follow-up (an AIS-derived cable-route anomaly detector).
-No frontend deep-dive yet (see below).
 
 ## Domain 3 — Information environment
 
@@ -76,9 +82,11 @@ EU-official secondary source) isn't integrated yet.
 Tracks cyberattack/energy/water/telecom-disruption pressure around
 Finland/Baltic keywords, same GDELT two-component shape as domains 1/3.
 NCSC-FI, ENISA's EUVD, and CERT-EU advisory feeds are logged alongside it as
-headlines (shown, not scored); Fingrid's power-system-state data is polled
-but not yet wired in. See METHODOLOGY.md for the full formula and source
-verification notes. No frontend deep-dive yet (see below).
+headlines (shown, not scored); Fingrid's power-system-state and
+electricity-shortage-status traffic lights are polled and shown as their
+own widget on the deep-dive view (shown, not scored — same reasoning as the
+advisory feeds). See METHODOLOGY.md for the full formula and source
+verification notes.
 
 ## Domain 5 — Social stability
 
@@ -87,8 +95,7 @@ GDELT, combined with Statistics Finland's monthly Consumer Confidence
 Indicator — the first domain to score an official statistic directly into
 the index rather than only showing it alongside. See METHODOLOGY.md for the
 full formula, the placeholder confidence-normalization span, and why
-Eurobarometer/Eurofound/Findikaattori/Poliisi.fi weren't integrated. No
-frontend deep-dive yet (see below).
+Eurobarometer/Eurofound/Findikaattori/Poliisi.fi weren't integrated.
 
 ## Domain 6 — Environmental & climate security
 

@@ -13,12 +13,18 @@ interface DomainMeta {
 
 const DOMAINS: DomainMeta[] = [
   { n: 1, nameKey: 'domain.1.name', summaryKey: 'domain.1.summary', live: true },
-  { n: 2, nameKey: 'domain.2.name', summaryKey: 'domain.2.summary', live: false },
+  { n: 2, nameKey: 'domain.2.name', summaryKey: 'domain.2.summary', live: true },
   { n: 3, nameKey: 'domain.3.name', summaryKey: 'domain.3.summary', live: true },
-  { n: 4, nameKey: 'domain.4.name', summaryKey: 'domain.4.summary', live: false },
-  { n: 5, nameKey: 'domain.5.name', summaryKey: 'domain.5.summary', live: false },
-  { n: 6, nameKey: 'domain.6.name', summaryKey: 'domain.6.summary', live: false },
+  { n: 4, nameKey: 'domain.4.name', summaryKey: 'domain.4.summary', live: true },
+  { n: 5, nameKey: 'domain.5.name', summaryKey: 'domain.5.summary', live: true },
+  { n: 6, nameKey: 'domain.6.name', summaryKey: 'domain.6.summary', live: true },
 ];
+
+/** Maps a domain number to its AppState.modules key, for domains 2/4/5/6
+ * which share the generic {index, headlines, advisories?} shape. */
+const MODULE_KEY: Record<number, 'infra' | 'social' | 'hybrid' | 'climate'> = {
+  2: 'hybrid', 4: 'infra', 5: 'social', 6: 'climate',
+};
 
 export function init(state: AppState): void {
   renderSynthesis(state);
@@ -32,6 +38,10 @@ function renderSynthesis(state: AppState): void {
   const infoenv = state.modules.infoenv.index;
   if (nordic) parts.push(`${t('domain.1.name')}: ${t('band.' + nordic.band)}`);
   if (infoenv) parts.push(`${t('domain.3.name')}: ${t('band.' + infoenv.band)}`);
+  for (const n of [2, 4, 5, 6] as const) {
+    const idx = state.modules[MODULE_KEY[n]].index;
+    if (idx) parts.push(`${t(`domain.${n}.name`)}: ${t('band.' + idx.band)}`);
+  }
 
   const el = document.getElementById('synthesis-coverage')!;
   el.textContent = t('dashboard.coverage', { n: liveCount, total: DOMAINS.length }) +
@@ -49,6 +59,11 @@ function renderCards(state: AppState): void {
     let summary = t(d.summaryKey);
     if (d.n === 1 && state.modules.nordic.index) summary = t('band.' + state.modules.nordic.index.band);
     if (d.n === 3 && state.modules.infoenv.index) summary = t('band.' + state.modules.infoenv.index.band);
+    const moduleKey = MODULE_KEY[d.n];
+    if (moduleKey) {
+      const idx = state.modules[moduleKey].index;
+      if (idx) summary = t('band.' + idx.band);
+    }
 
     const statusLabel = d.live ? t('domain.status.live') : t('domain.status.scouted');
     btn.innerHTML = `
