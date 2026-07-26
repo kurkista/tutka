@@ -52,22 +52,64 @@ function toFeatureCollection(): GeoJSON.FeatureCollection {
   };
 }
 
-/** White triangle rendered as an SDF so icon-color can tint it per category. */
-function arrowImage(): { width: number; height: number; data: Uint8Array } {
-  const size = 24;
+const ICON_PX = 32;
+
+/**
+ * Draw a symbol as a white mask on a transparent square, for addImage(…,
+ * {sdf: true}) so icon-color can tint one shared image per category.
+ *
+ * `path` receives a context whose origin is the icon centre with +y pointing
+ * "north", i.e. the direction icon-rotate treats as 0°. Shapes are therefore
+ * written the way you'd draw them on paper, nose up.
+ */
+function symbolImage(path: (ctx: CanvasRenderingContext2D) => void) {
   const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = size;
+  canvas.width = canvas.height = ICON_PX;
   const ctx = canvas.getContext('2d')!;
-  ctx.beginPath();
-  ctx.moveTo(size / 2, 3);
-  ctx.lineTo(size - 6, size - 5);
-  ctx.lineTo(size / 2, size - 9);
-  ctx.lineTo(6, size - 5);
-  ctx.closePath();
+  ctx.translate(ICON_PX / 2, ICON_PX / 2);
   ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  path(ctx);
+  ctx.closePath();
   ctx.fill();
-  return ctx.getImageData(0, 0, size, size) as unknown as { width: number; height: number; data: Uint8Array };
+  return ctx.getImageData(0, 0, ICON_PX, ICON_PX) as unknown as
+    { width: number; height: number; data: Uint8Array };
 }
+
+/** Mirror a right-hand outline into a closed symmetrical shape. */
+function symmetrical(ctx: CanvasRenderingContext2D, right: [number, number][]): void {
+  ctx.moveTo(0, right[0][1]);
+  for (const [x, y] of right) ctx.lineTo(x, y);
+  for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(-right[i][0], right[i][1]);
+}
+
+/**
+ * A vessel from above: pointed bow, parallel sides, square stern. Replaces the
+ * triangle that ships used to share with aircraft — at a glance the two were
+ * the same symbol in two colours, which is not a distinction a map should ask
+ * a reader to hold in their head.
+ */
+const vesselImage = () => symbolImage((ctx) => {
+  ctx.moveTo(0, -14);              // bow
+  ctx.quadraticCurveTo(5, -8, 5, -2); // starboard shoulder
+  ctx.lineTo(5, 11);               // starboard side
+  ctx.lineTo(-5, 11);              // stern, squared off
+  ctx.lineTo(-5, -2);
+  ctx.quadraticCurveTo(-5, -8, 0, -14);
+});
+
+/** An aircraft from above: fuselage, swept wings, tailplane. */
+const aircraftImage = () => symbolImage((ctx) => symmetrical(ctx, [
+  [1.6, -15],   // nose
+  [2.2, -4],    // fuselage at the wing root
+  [15, 5],      // wingtip, swept back
+  [15, 7.5],
+  [2.2, 2],     // wing trailing edge, back to the fuselage
+  [2.2, 10],    // aft fuselage
+  [7, 14],      // tailplane tip
+  [7, 15.5],
+  [0, 13],      // tail
+]));
 
 function flightsFC(): GeoJSON.FeatureCollection {
   return {
@@ -82,7 +124,12 @@ function flightsFC(): GeoJSON.FeatureCollection {
 
 export function initMap(container: HTMLElement, initial: Vessel[], initialFlights: Aircraft[] = []): void {
   for (const v of initial) vessels.set(v.mmsi, v);
-  flights = initialFlights;
+  // Seed from the boot snapshot only if no live tick has landed yet. The map
+  // is built lazily on the first visit to domain 1, so by the time we get
+  // here updateFlights() may already hold fresher aircraft than the state the
+  // page booted with — and assigning unconditionally threw them away, leaving
+  // the map a poll behind the Live layers card that counts the same feed.
+  if (flights.length === 0) flights = initialFlights;
 
   map = new maplibregl.Map({
     container,
@@ -94,7 +141,8 @@ export function initMap(container: HTMLElement, initial: Vessel[], initialFlight
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
 
   map.on('load', () => {
-    map.addImage('vessel-arrow', arrowImage(), { sdf: true });
+    map.addImage('vessel-hull', vesselImage(), { sdf: true });
+    map.addImage('aircraft', aircraftImage(), { sdf: true });
 
     // No gate line — gate-crossing detection is disabled (GATE.enabled=false,
     // no single chokepoint meridian in the open Baltic).
@@ -123,15 +171,15 @@ export function initMap(container: HTMLElement, initial: Vessel[], initialFlight
       },
     });
 
-    // moving vessels as heading-rotated arrows
+    // moving vessels as heading-rotated hulls
     map.addLayer({
       id: 'vessel-arrows',
       type: 'symbol',
       source: 'vessels',
       filter: ['get', 'hasHdg'],
       layout: {
-        'icon-image': 'vessel-arrow',
-        'icon-size': ['interpolate', ['linear'], ['zoom'], 6, 0.45, 10, 0.8],
+        'icon-image': 'vessel-hull',
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 6, 0.34, 10, 0.6],
         'icon-rotate': ['get', 'hdg'],
         'icon-rotation-alignment': 'map',
         'icon-allow-overlap': true,
@@ -140,8 +188,8 @@ export function initMap(container: HTMLElement, initial: Vessel[], initialFlight
     });
 
     // flight layer (OpenSky), toggleable, above vessels. A soft halo behind
-    // the arrow keeps small aircraft symbols visible against the dark basemap
-    // at low zoom, where a plain icon-size 0.3 arrow reads as an empty map.
+    // the symbol keeps small aircraft visible against the dark basemap at low
+    // zoom, where a plain icon-size 0.3 symbol reads as an empty map.
     map.addSource('flights', { type: 'geojson', data: flightsFC() });
     map.addLayer({
       id: 'flight-halo',
@@ -160,8 +208,8 @@ export function initMap(container: HTMLElement, initial: Vessel[], initialFlight
       type: 'symbol',
       source: 'flights',
       layout: {
-        'icon-image': 'vessel-arrow',
-        'icon-size': ['interpolate', ['linear'], ['zoom'], 6, 0.55, 10, 0.95],
+        'icon-image': 'aircraft',
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 6, 0.38, 10, 0.62],
         'icon-rotate': ['get', 'trk'],
         'icon-rotation-alignment': 'map',
         'icon-allow-overlap': true,

@@ -14,6 +14,38 @@ rather than written at the time, and are marked as such.
 
 ---
 
+## 2026-07-26 · LOW · The map threw away live aircraft and redrew a boot-time snapshot · RESOLVED
+
+**What happened:**
+Domain 1's map could show a different set of aircraft than the "Live layers"
+card counting the same feed, a few metres to its left. Noticed while checking
+an unrelated report that the card read `0 aircraft · updated never` — that
+particular reading turned out to be a cold machine right after `fly deploy`,
+with OpenSky not yet polled, which is honest behaviour. Reading the code to
+confirm that turned up a real defect next to it.
+
+**Root cause:**
+`initMap()` ran `flights = initialFlights`, unconditionally, from the
+`/api/state` snapshot the page booted with. The map is built lazily on the
+first visit to domain 1 (`onFirstView('1', …)`), so an SSE tick could — and on
+any visit later than ~30 s after load, usually did — have already put fresher
+aircraft in the module-level `flights` array. Building the map then discarded
+them and rendered the older snapshot until the next tick, up to two minutes.
+Same class as several entries below: the two surfaces disagreed, and the
+staler one looked exactly as confident as the fresh one.
+
+**Fix (`web/src/map.ts`):**
+Seed from the boot snapshot only when nothing live has arrived yet
+(`if (flights.length === 0)`). Vessels were never affected — they merge into a
+Map by MMSI instead of being reassigned.
+
+**Rule added:**
+When a panel is built lazily, its initial-state argument is a *fallback*, not
+the truth. Anything that can arrive before the panel exists must be merged,
+not assigned.
+
+---
+
 ## 2026-07-26 · HIGH · GDELT news volume was a clock, not a 24-hour article count — every domain's largest index component measured time of day · RESOLVED
 
 **What happened:**
