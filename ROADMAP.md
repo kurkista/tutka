@@ -156,6 +156,21 @@ Why the earlier attempt didn't hold up, and what would have to be different:
   index. Any multi-series view needs the shared robust-z normalization
   instead, or it is decoration.
 
+## Open loose ends from 2026-07-26
+
+- **Confirm domain 1's map actually draws ships.** One look in a normal
+  browser: tutka.fly.dev → domain 1 → Map. Markers on the water, legend
+  reading tanker/cargo/other/type unknown. The fix is deployed but its end
+  state was never observed — the session's tooling browser could not load map
+  tiles. Full detail in `INCIDENT_LOG.md`'s HIGH entry for that date.
+- **Class B vessels are absent from the map entirely.** The AIS subscription
+  takes only `PositionReport` and `ShipStaticData`, so Class B transponders
+  (~140 distinct MMSI per 8 minutes, plus their `StaticDataReport` type
+  messages) never arrive. These are mostly leisure craft and small workboats
+  in the archipelago, so excluding them is defensible for a threat monitor and
+  arguably correct — but it is currently an accident of the subscription
+  rather than a decision. Decide which it is.
+
 ## Smaller, separable, and real
 
 Found during the same pass; each stands alone.
