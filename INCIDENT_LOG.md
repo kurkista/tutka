@@ -18,6 +18,41 @@ rather than written at the time, and are marked as such.
 
 ---
 
+## 2026-07-26 · LOW · ROADMAP.md published the same section twice, and `/api/roadmap` served it that way for a day · RESOLVED
+
+**What happened:**
+`## Domain 2 follow-up — build our own intel source` appeared twice in
+ROADMAP.md, verbatim and in full — once after the intro and again between the
+Domain 6 follow-up and the cross-cutting notes. The file is served publicly at
+`/api/roadmap` and rendered in the app, so the repetition was visitor-facing,
+not just a repo wart. Raised by the owner.
+
+**Root cause:**
+`04b50a0` (domain 6 backend, 2026-07-25) rewrote ROADMAP.md from its old
+"unbuilt domains" framing to the current "follow-ups" one. That rewrite
+replaced `## Domain 6 — …` with `## Domain 6 follow-up …` and, in the same
+hunk, re-emitted a complete copy of the Domain 2 block it had already written
+above. A whole-section rewrite, not an edit — so the duplicate arrived as
+plain added lines with nothing to collide with, and no test, lint, or review
+step looks at prose. It survived three later commits that touched the file
+(`7f59891`, `4001ea0`, `bcf5fbc`), each of which edited a different part of it.
+
+**Fix (`ROADMAP.md`):**
+Deleted the second copy, kept the first. Both copies were confirmed
+byte-identical before removing either, so nothing was lost. Checked that the
+transition the deletion creates — Domain 6 follow-up straight into
+`## Cross-cutting notes` — still reads, and that `main.ts`'s roadmap renderer
+splits on `^## ` heading *text* rather than section position, so nothing
+downstream depended on the extra block. The Backlog section is untouched.
+
+**Rule added:**
+Published docs are a public surface with no test covering them. When a commit
+rewrites a doc section wholesale rather than editing in place, re-read the
+resulting file end to end — the failure mode is duplicated or orphaned prose,
+which git shows as ordinary added lines and no tooling here will catch.
+
+---
+
 ## 2026-07-26 · MEDIUM · Every vessel is "other" — the tanker/cargo legend advertises two permanently empty categories · OPEN
 
 **What happened:**

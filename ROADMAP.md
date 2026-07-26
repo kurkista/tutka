@@ -62,43 +62,6 @@ if a lightweight way to use them ever exists:
    lightweight extraction approach (e.g. a pre-built Copernicus CDS
    "toolbox" recipe) turns up later.
 
-## Domain 2 follow-up — build our own intel source
-
-Domain 2 (Hybrid & grey-zone threats: GPS/GNSS jamming, undersea
-cable/pipeline sabotage, drone incursions, instrumentalized migration at
-the eastern border) shipped as `hybrid-v0` with the weakest sourcing of any
-built domain: a GDELT news V/T pair plus one keyword-filtered advisory RSS
-feed (Rajavartiolaitos), no third scored component. Two research passes
-(2026-07-25) checked not just Finland's own sources but what Sweden,
-Estonia, NATO, the EU, and even Ukraine publish in these threat
-categories — see METHODOLOGY.md's Domain 2 section for the full source
-list. The finding: **this isn't a gap that more searching will fix.** No
-Baltic state, NATO, or the EU publishes structured, machine-readable data
-for cable/pipeline sabotage or border incidents — it's closed by design
-region-wide (Finland's own border opacity is a stated
-operational-security policy, on the record, not an oversight). The
-realistic path to strengthening domain 2 is **building tutka's own
-signal(s) instead of waiting for a feed that doesn't exist.** Two concrete
-candidates, in rough priority order:
-
-1. **AIS cable-route anomaly detector.** Loitering, course-change, and
-   AIS-gap ("dark vessel") detection over the known Baltic cable/pipeline
-   routes (C-Lion1, Balticconnector, Estlink), reusing tutka's existing
-   live AIS ingestion (currently shown-not-scored for domain 1) — the same
-   maritime-domain-awareness approach NATO's Nordic Warden and Baltic
-   Sentry run internally, just self-built instead of closed. Confirmed via
-   reading `server/vessels.js`: the current `VesselStore` is a pure
-   in-memory position/gate-crossing tracker with no route-proximity or
-   loitering logic today, so this is real new engineering — route
-   geometry data, proximity/loitering scoring, likely new persistent
-   state — not a quick add.
-2. **In-house GNSS-jamming proxy.** `adsb.fi` (EU/Finnish-run open ADS-B
-   data, github.com/adsbfi/opendata) as a free alternative to computing a
-   jamming-anomaly signal in-house, instead of depending on FlySafe.zone
-   (a UAE-based commercial reseller of the same underlying GPSJam/ADS-B
-   Exchange data). Flagged as unverified/needs a dedicated feasibility
-   look — not yet confirmed production-ready.
-
 ## Cross-cutting notes for whoever adds a domain 7
 
 - Reuse `server/indices/engine.js` for the weighted-scoring/hysteresis-banding
