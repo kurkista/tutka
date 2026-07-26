@@ -92,7 +92,10 @@ let lastPersistTs = 0;
 export function gatherAndCompute(now = Date.now()) {
   const prev = latestIndexSnapshot(INDEX_NAME);
   const t = latestSeries('pw_7dma');
-  const vol = latestSeries('gdelt_vol24h');
+  // Renamed from gdelt_vol24h — it was always a partial-day count, and the
+  // db migration moved the historical rows with it. This index is dormant
+  // (Hormuz retired as a domain); the read is kept working, not rebuilt.
+  const vol = latestSeries('gdelt_vol_today');
   const base = latestSeries('gdelt_base_daily');
   const p = latestSeries('poly_p');
   const sigma = latestSeries('brent_sigma20');

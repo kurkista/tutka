@@ -97,6 +97,23 @@ test('currentReading falls back to the latest point when the window is empty', (
   assert.equal(r.samples, 1);
 });
 
+test('windowMs 0 scores the latest point alone, keeping a one-day spike intact', () => {
+  // DEVIATION_DAILY relies on this: GDELT volume arrives one point per day,
+  // and a single day's spike is the signal. Taking a median across days would
+  // average it away with its quiet neighbours.
+  const day = 86400_000;
+  const now = 1_800_000_000_000;
+  const points = [
+    { ts: now - 2 * day, value: 100 },
+    { ts: now - 1 * day, value: 110 },
+    { ts: now, value: 900 }, // the spike
+  ];
+  const r = currentReading(points, now, 0);
+  assert.ok(r);
+  assert.equal(r.value, 900, 'the spike must survive as the current reading');
+  assert.equal(r.samples, 1);
+});
+
 test('baselineFrom refuses too few samples or too short a span', () => {
   const now = 1_000_000_000;
   const day = 86400_000;

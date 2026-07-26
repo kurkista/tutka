@@ -104,11 +104,16 @@ const clamp01 = (x) => Math.min(1, Math.max(0, x));
  * A robust reading of "right now" — the median of the most recent
  * `windowMs`, rather than the single latest sample.
  *
- * GDELT's vol24h is a 24h rolling sum resampled every ~30 min by the relay,
- * and its inter-quartile spread over a calm fortnight was 46→236 — mostly
- * relay timing and GDELT subsampling, not news reality. Scoring the latest
- * point alone would chase that. Falls back to the latest point when the
- * window is empty.
+ * Sub-daily series (tone, and anything the relay resamples every ~30 min)
+ * carry scatter that is relay timing rather than news reality, and scoring
+ * their latest point alone would chase it. A `windowMs` wide enough to hold
+ * several samples averages that away.
+ *
+ * `windowMs: 0` is the deliberate opposite, for series that already arrive
+ * one point per period — GDELT's per-day volume totals. There the latest
+ * point is the reading, and taking a median across days would smooth away
+ * the single-day spike that is the whole signal. An empty window falls
+ * through to the latest point, which is exactly that behaviour.
  *
  * @param {Array<{ts: number, value: number}>} points ascending by ts
  * @param {number} now

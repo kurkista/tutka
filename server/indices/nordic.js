@@ -10,14 +10,14 @@
 // v1: scoring moved from "level vs a frozen calendar-2025 baseline" to
 // "deviation from this metric's own trailing 30 days" — see ./deviation.js
 // for why v0 was arithmetically pinned at CALM.
-import { NORDIC } from '../config.js';
+import { NORDIC, DEVIATION_DAILY } from '../config.js';
 import { makeDomainIndex } from './domainIndex.js';
 
 const nordic = makeDomainIndex({
   name: 'nordic',
   config: NORDIC,
   components: [
-    { key: 'V', metric: 'gdelt_nordic_vol24h', direction: 'high', zeroIsMissing: true },
+    { key: 'V', metric: 'gdelt_nordic_vol_daily', direction: 'high', zeroIsMissing: true, tuning: DEVIATION_DAILY },
     { key: 'T', metric: 'gdelt_nordic_tone', direction: 'low' },
   ],
 });

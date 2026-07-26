@@ -1,6 +1,6 @@
 # How tutka computes its domain indices
 
-*Last updated 2026-07-25*
+*Last updated 2026-07-26*
 
 tutka watches several civic/geopolitical-risk domains (see
 [README.md](README.md) for the full taxonomy) and condenses each into one
@@ -64,21 +64,26 @@ hotspot counts — is scored the same way, in `server/indices/deviation.js`:
    metric's own trailing 30 days. Median and MAD rather than mean and standard
    deviation, so one relay artifact or one news spike does not move the
    yardstick it is being measured against.
-2. **Current reading:** the median of the last 12 hours, not the newest
-   sample. GDELT's `vol24h` is a 24-hour rolling sum resampled every ~30 min;
-   its within-day scatter is dominated by relay timing, while the real signal
-   is day-to-day.
+2. **Current reading:** for news volume, the latest **complete UTC day**
+   (`gdelt_*_vol_daily`). For sub-daily series such as tone, the median of the
+   last 12 hours rather than the newest sample, because their within-day
+   scatter is dominated by relay timing rather than by the world.
 3. **Score:** `z = 0.6745 × (current − median) / MAD`, then
    `100 × clamp(z_concerning / 3, 0, 1)`, where `z_concerning` flips sign for
    components whose concerning direction is *down* (tone, consumer
    confidence). The benign side scores 0 but is still **labelled**, which is
    how "unusually quiet" stays visible instead of reading as calm.
 
-`zSpan = 3` was calibrated against 528 real `gdelt_nordic_vol24h` and 394
-`gdelt_nordic_tone` observations: replaying v1 over a genuinely calm fortnight
-gives a median of 5.5, p90 of 26.9, a maximum of 49.2, and NORMAL 90% of the
-time — never EXTREME during an uneventful window. `zSpan = 2` fired EXTREME on
-2.7% of that same calm fortnight, which is too loose to be believed.
+`zSpan = 3` was calibrated against 394 real `gdelt_nordic_tone` observations:
+replaying v1 over a genuinely calm fortnight gives a median of 5.5, p90 of
+26.9, a maximum of 49.2, and NORMAL 90% of the time — never EXTREME during an
+uneventful window. `zSpan = 2` fired EXTREME on 2.7% of that same calm
+fortnight, which is too loose to be believed.
+
+The volume half of that calibration used `gdelt_nordic_vol24h`, which v2
+retired (below); its spread was mostly time-of-day, so `zSpan` currently
+carries over to the daily series as an estimate rather than a measurement.
+Recheck it once `gdelt_*_vol_daily` has real history.
 
 **Direction is inverted from v0: 0 = normal, 100 = most unusual.** v0 ran
 "higher = calmer", which made a headline reading of "Tension Index 89" mean
@@ -88,20 +93,68 @@ time — never EXTREME during an uneventful window. `zSpan = 2` fired EXTREME on
 thing in each): < 25 **NORMAL** · 25–49 **NOTABLE** · 50–74 **HIGH** · ≥ 75
 **EXTREME**. A band change must clear the boundary by 2 points (hysteresis).
 
-### What v1 refuses to do
+### Why v2 replaced the news-volume input *(2026-07-26)*
 
-A baseline needs at least 48 samples spanning at least 3 days, and a metric
-that is constant over the window has no spread to measure against. When
+v1 fixed the *scoring* and left the *input* wrong. `gdelt_*_vol24h` was
+supposed to be a 24-hour article count. It never was.
+
+At `timespan=30d` the GDELT DOC 2.0 API answers in **daily** buckets, not the
+15-minute buckets a short timespan returns. The poller summed "every bucket in
+the last 24 hours", and only *today's* bucket can ever satisfy that filter —
+yesterday's is stamped 00:00 and falls out of a rolling 24-hour window the
+moment the clock passes it. So the stored value was **articles so far today**,
+resetting to 0 at UTC midnight.
+
+The stored series shows it unambiguously. Sixteen days of
+`gdelt_nordic_vol24h` ramp monotonically from 0 just after midnight to ~290 by
+23:47, then drop to 0 and start again. Every domain's V component was
+measuring, with news-shaped noise on top, **what time of day it was**. Live
+proof at the moment of the fix: nordic's V had a baseline median of 122 and a
+MAD of 82 — a spread two-thirds the size of the median, essentially all of it
+manufactured by the clock, and wide enough to swallow a genuine news surge.
+
+This also re-explains the sawtooth previously blamed on truncated GDELT
+responses and filtered out via `zeroIsMissing`. It was a midnight reset, not a
+dropout.
+
+**v2 stores complete days instead.** Each ingest rewrites the whole 30-day
+window from GDELT's own payload — `putSeries` is INSERT-OR-REPLACE keyed on
+each day's 00:00 UTC, so re-writing is idempotent and GDELT's back-revisions
+(a day's count keeps growing for hours after midnight as its index catches up)
+are picked up. Two consequences:
+
+- A newly added domain gets a **full 30-day baseline from its first successful
+  fetch**, instead of accruing one over a month.
+- The freshest possible V reading is 24–48 hours old by construction, so
+  `stalenessMs.V` is 52 h. Relay outages stay visible through the jobs
+  staleness map, which watches the ingest rather than the datapoint.
+
+The old partial-day count is still collected as `gdelt_*_vol_today` — useful
+as live colour ("articles so far today"), never scored. Historical `*_vol24h`
+rows were renamed to `*_vol_today` by a one-time migration: that is not a
+reinterpretation, it is what they always contained.
+
+### What the scoring refuses to do
+
+A baseline needs enough history to mean anything — 20 samples over 14 days
+for the daily volume series, 48 samples over 3 days for sub-daily ones — and a
+metric that is constant over the window has no spread to measure against. When
 either check fails the component is dropped; when nothing survives, the
-domain reports **no index at all** rather than a confident-looking zero. A
-freshly-added domain therefore reads "building baseline" for its first few
-days — which is true, and better than the alternative v0 chose.
+domain reports **no index at all** rather than a confident-looking zero.
 
-One consequence worth stating plainly: several domains' GDELT queries return
-single-digit daily article counts (climate's median was **1 article/day**).
-A constant series is unscoreable by design, so those domains will keep
-reporting null until their queries are widened. That is the honest reading of
-the data, not a bug in the scoring.
+Until v2 this was also the standing explanation for why domains 2, 4, 5 and 6
+reported null: their GDELT queries appeared to return single-digit daily
+article counts (climate's stored median was **1 article/day**), and a
+near-constant series is unscoreable by design. That explanation was wrong.
+Querying GDELT directly for domain 6's *exact current* query returned ~20
+articles/day — 21, 16, 27, 21, 29, 23 over six days. The queries were fine;
+the ingestion was discarding all but a partial slice of them (see v2 above).
+Since v2 backfills 30 complete days on the first fetch, those domains get a
+real baseline immediately rather than reading "building baseline" at all.
+
+This is worth recording as a general lesson: **"the data is too thin" is a
+conclusion that has to be measured at the source, not inferred from our own
+stored copy of it.** The stored copy was the broken part.
 
 ### Dropout handling
 
@@ -118,7 +171,7 @@ predates the ingest fix.
 
 ## Domain 1 — State & military tension: the Nordic Tension Index
 
-*Version: **nordic-v1***
+*Version: **nordic-v2***
 
 Tracks Finland/Baltic-NATO-Russia military and security tension. No clean
 daily official series exists for this the way IMF PortWatch existed for
@@ -182,6 +235,13 @@ dormant Hormuz appendix for why that logic is disabled rather than deleted.
 
 ### Changelog
 
+- **nordic-v2** (2026-07-26) — news volume is now the latest **complete UTC
+  day** (`gdelt_nordic_vol_daily`). The v1 input, `vol24h`, was never a
+  24-hour count: at `timespan=30d` GDELT answers in daily buckets, so summing
+  "every bucket in the last 24 hours" could only ever match today's partial
+  one — a counter that reset at UTC midnight, making V largely a clock. Each
+  ingest now backfills 30 complete days, so the baseline is real from the
+  first fetch. See [Why v2 replaced the news-volume input](#why-v2-replaced-the-news-volume-input-2026-07-26).
 - **nordic-v1** (2026-07-25) — scoring replaced wholesale: every component is
   now a two-sided robust deviation from its own trailing 30 days, and the
   index reads 0 = normal / 100 = most unusual (v0 ran the other way).
@@ -196,7 +256,7 @@ dormant Hormuz appendix for why that logic is disabled rather than deleted.
 
 ## Domain 3 — Information environment
 
-*Version: **infoenv-v1***
+*Version: **infoenv-v2***
 
 Tracks disinformation/influence-operation narrative pressure around
 Finland/Baltic keywords. Reuses the same GDELT mechanism as domain 1, with
@@ -238,6 +298,13 @@ stable programmatic channel.
 
 ### Changelog
 
+- **infoenv-v2** (2026-07-26) — news volume is now the latest **complete UTC
+  day** (`gdelt_infoenv_vol_daily`). The v1 input, `vol24h`, was never a
+  24-hour count: at `timespan=30d` GDELT answers in daily buckets, so summing
+  "every bucket in the last 24 hours" could only ever match today's partial
+  one — a counter that reset at UTC midnight, making V largely a clock. Each
+  ingest now backfills 30 complete days, so the baseline is real from the
+  first fetch. See [Why v2 replaced the news-volume input](#why-v2-replaced-the-news-volume-input-2026-07-26).
 - **infoenv-v1** (2026-07-25) — scoring replaced wholesale: every component is
   now a two-sided robust deviation from its own trailing 30 days, and the
   index reads 0 = normal / 100 = most unusual (v0 ran the other way).
@@ -252,7 +319,7 @@ stable programmatic channel.
 
 ## Domain 4 — Civic & critical infrastructure
 
-*Version: **infra-v1***
+*Version: **infra-v2***
 
 Tracks cyberattack/energy/water/telecom-disruption pressure around
 Finland/Baltic keywords. Same GDELT mechanism and two-component shape as
@@ -298,6 +365,13 @@ locally; still needs `fly secrets set FINGRID_API_KEY` to go live.
 
 ### Changelog
 
+- **infra-v2** (2026-07-26) — news volume is now the latest **complete UTC
+  day** (`gdelt_infra_vol_daily`). The v1 input, `vol24h`, was never a
+  24-hour count: at `timespan=30d` GDELT answers in daily buckets, so summing
+  "every bucket in the last 24 hours" could only ever match today's partial
+  one — a counter that reset at UTC midnight, making V largely a clock. Each
+  ingest now backfills 30 complete days, so the baseline is real from the
+  first fetch. See [Why v2 replaced the news-volume input](#why-v2-replaced-the-news-volume-input-2026-07-26).
 - **infra-v1** (2026-07-25) — scoring replaced wholesale: every component is
   now a two-sided robust deviation from its own trailing 30 days, and the
   index reads 0 = normal / 100 = most unusual (v0 ran the other way).
@@ -312,7 +386,7 @@ locally; still needs `fly secrets set FINGRID_API_KEY` to go live.
 
 ## Domain 5 — Social stability
 
-*Version: **social-v1***
+*Version: **social-v2***
 
 Tracks polarization/unrest pressure around Finland/Baltic keywords, combined
 with Statistics Finland's monthly household-confidence survey — the first
@@ -384,6 +458,13 @@ query wording above.
 
 ### Changelog
 
+- **social-v2** (2026-07-26) — news volume is now the latest **complete UTC
+  day** (`gdelt_social_vol_daily`). The v1 input, `vol24h`, was never a
+  24-hour count: at `timespan=30d` GDELT answers in daily buckets, so summing
+  "every bucket in the last 24 hours" could only ever match today's partial
+  one — a counter that reset at UTC midnight, making V largely a clock. Each
+  ingest now backfills 30 complete days, so the baseline is real from the
+  first fetch. See [Why v2 replaced the news-volume input](#why-v2-replaced-the-news-volume-input-2026-07-26).
 - **social-v1** (2026-07-25) — scoring replaced wholesale: every component is
   now a two-sided robust deviation from its own trailing 30 days, and the
   index reads 0 = normal / 100 = most unusual (v0 ran the other way). C (StatFin consumer confidence) is scored against its own
@@ -401,7 +482,7 @@ query wording above.
 
 ## Domain 2 — Hybrid & grey-zone threats
 
-*Version: **hybrid-v1***
+*Version: **hybrid-v2***
 
 Tracks GPS/GNSS jamming, undersea cable/pipeline sabotage, drone-incursion,
 and instrumentalized-migration pressure around Finland/Baltic keywords. Same
@@ -502,6 +583,13 @@ genuinely differentiated signal available, scoped there as future work.
 
 ### Changelog
 
+- **hybrid-v2** (2026-07-26) — news volume is now the latest **complete UTC
+  day** (`gdelt_hybrid_vol_daily`). The v1 input, `vol24h`, was never a
+  24-hour count: at `timespan=30d` GDELT answers in daily buckets, so summing
+  "every bucket in the last 24 hours" could only ever match today's partial
+  one — a counter that reset at UTC midnight, making V largely a clock. Each
+  ingest now backfills 30 complete days, so the baseline is real from the
+  first fetch. See [Why v2 replaced the news-volume input](#why-v2-replaced-the-news-volume-input-2026-07-26).
 - **hybrid-v1** (2026-07-25) — scoring replaced wholesale: every component is
   now a two-sided robust deviation from its own trailing 30 days, and the
   index reads 0 = normal / 100 = most unusual (v0 ran the other way).
@@ -518,7 +606,7 @@ genuinely differentiated signal available, scoped there as future work.
 
 ## Domain 6 — Environmental & climate security
 
-*Version: **climate-v1***
+*Version: **climate-v2***
 
 Tracks wildfire/drought/extreme-weather pressure around Finland/Baltic
 keywords, combined with NASA FIRMS's active-fire hotspot count — like domain
@@ -645,6 +733,13 @@ follow-up.
 
 ### Changelog
 
+- **climate-v2** (2026-07-26) — news volume is now the latest **complete UTC
+  day** (`gdelt_climate_vol_daily`). The v1 input, `vol24h`, was never a
+  24-hour count: at `timespan=30d` GDELT answers in daily buckets, so summing
+  "every bucket in the last 24 hours" could only ever match today's partial
+  one — a counter that reset at UTC midnight, making V largely a clock. Each
+  ingest now backfills 30 complete days, so the baseline is real from the
+  first fetch. See [Why v2 replaced the news-volume input](#why-v2-replaced-the-news-volume-input-2026-07-26).
 - **climate-v1** (2026-07-25) — scoring replaced wholesale: every component is
   now a two-sided robust deviation from its own trailing 30 days, and the
   index reads 0 = normal / 100 = most unusual (v0 ran the other way). F (FIRMS hotspots) drops the `100 − 5×count` linear falloff,

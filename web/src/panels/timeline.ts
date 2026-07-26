@@ -17,12 +17,12 @@ const METRICS: {
   zeroIsMissing?: boolean;
 }[] = [
   { metric: 'nordic_index', labelKey: 'timeline.nordicIndex', color: SERIES[0], fmt: (v) => fmtNum(v, 0) },
-  // A 24h rolling article count cannot really drop to 0 and back within the
-  // hour; those are truncated GDELT responses (see storeGdeltVolume). Plotted
-  // raw they turned this series into a sawtooth that swamped everything else
-  // on the shared axis. Filtered here for the same reason the index filters
-  // them — a dropout is missing data, not a quiet news day.
-  { metric: 'gdelt_nordic_vol24h', labelKey: 'timeline.news', color: SERIES[1], fmt: (v) => fmtNum(v, 0), zeroIsMissing: true },
+  // One point per complete UTC day. The sawtooth this series used to draw was
+  // not truncated responses, as the comment here previously claimed — it was
+  // a within-day running total resetting at midnight (see storeGdeltVolume).
+  // `zeroIsMissing` stays: a whole day at literally zero articles is a failed
+  // fetch, and plotting it as a quiet news day is the one thing we don't do.
+  { metric: 'gdelt_nordic_vol_daily', labelKey: 'timeline.news', color: SERIES[1], fmt: (v) => fmtNum(v, 0), zeroIsMissing: true },
   { metric: 'gdelt_nordic_tone', labelKey: 'timeline.tone', color: SERIES[2], fmt: (v) => fmtNum(v, 1) },
   { metric: 'nordic_vessels_in_zone', labelKey: 'timeline.ships', color: SERIES[3], fmt: (v) => fmtNum(v, 0) },
   { metric: 'flights_count', labelKey: 'timeline.flights', color: SERIES[4], fmt: (v) => fmtNum(v, 0) },

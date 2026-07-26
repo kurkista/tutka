@@ -9,14 +9,14 @@
 // here the way domain 5 got one.
 //
 // v1: deviation-scored against its own trailing history — see ./deviation.js.
-import { HYBRID } from '../config.js';
+import { HYBRID, DEVIATION_DAILY } from '../config.js';
 import { makeDomainIndex } from './domainIndex.js';
 
 const hybrid = makeDomainIndex({
   name: 'hybrid',
   config: HYBRID,
   components: [
-    { key: 'V', metric: 'gdelt_hybrid_vol24h', direction: 'high', zeroIsMissing: true },
+    { key: 'V', metric: 'gdelt_hybrid_vol_daily', direction: 'high', zeroIsMissing: true, tuning: DEVIATION_DAILY },
     { key: 'T', metric: 'gdelt_hybrid_tone', direction: 'low' },
   ],
 });

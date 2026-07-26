@@ -19,8 +19,17 @@ const DOMAINS = [
 
 for (const { n, name, config, keys } of DOMAINS) {
   test(`domain ${n} (${name}): config is coherent`, () => {
-    assert.equal(config.version, `${name}-v1`, 'version must be bumped with the formula change');
-    assert.equal(config.bands, DEVIATION_BANDS, 'all v1 domains share one band vocabulary');
+    assert.equal(config.version, `${name}-v2`, 'version must be bumped with the formula change');
+    assert.equal(config.bands, DEVIATION_BANDS, 'all v1+ domains share one band vocabulary');
+
+    // V reads one point per complete UTC day, stamped at that day's 00:00.
+    // Its age therefore runs 24h (just after midnight) to 48h (just before
+    // the next one), so any staleness gate under 48h drops the component
+    // permanently — silently, since a dropped component just renormalizes.
+    assert.ok(
+      config.stalenessMs.V >= 48 * 3600_000,
+      `stalenessMs.V is ${config.stalenessMs.V / 3600_000}h; a daily series is up to 48h old by construction`,
+    );
 
     // Weights must cover exactly the declared components and sum to 1, or the
     // engine's renormalization is quietly rescaling against a wrong total.

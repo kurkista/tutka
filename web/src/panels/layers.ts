@@ -44,7 +44,7 @@ export function onVessels(delta: { upsert?: { mmsi: number }[]; remove?: number[
 }
 
 export function onMetric(m: { metric: string; ts: number; value: number }): void {
-  if (m.metric === 'gdelt_nordic_vol24h') state.metrics.gdelt_nordic_vol24h = { ts: m.ts, value: m.value };
+  if (m.metric === 'gdelt_nordic_vol_today') state.metrics.gdelt_nordic_vol_today = { ts: m.ts, value: m.value };
   else return;
   render();
 }
@@ -99,7 +99,7 @@ function flightsRow(): LayerRow {
 }
 
 function newsRow(): LayerRow {
-  const vol = state.metrics.gdelt_nordic_vol24h;
+  const vol = state.metrics.gdelt_nordic_vol_today;
   const fresh = vol && Date.now() - vol.ts < NEWS_FRESH_MS;
   const status: DotStatus = fresh ? 'good' : 'warning';
   const detail = fresh ? t('layers.live') : t('layers.newsBlocked');

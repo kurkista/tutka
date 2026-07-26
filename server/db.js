@@ -75,6 +75,7 @@ export function openDb(path) {
 
   migrateHpiSnapshots(db);
   migrateHeadlinesModuleColumn(db);
+  migrateVol24hToVolToday(db);
 
   return db;
 }
@@ -101,6 +102,23 @@ function migrateHeadlinesModuleColumn(db) {
   if (cols.some((c) => c.name === 'module')) return;
   db.exec("ALTER TABLE headlines ADD COLUMN module TEXT NOT NULL DEFAULT 'hormuz'");
   console.log('[db] added headlines.module column (backfilled existing rows as \'hormuz\')');
+}
+
+// One-time rename: `*_vol24h` → `*_vol_today`. This is not a reinterpretation
+// of the old rows — it is what they always were. At timespan=30d GDELT returns
+// daily buckets, so the poller's "sum the buckets in the last 24h" could only
+// ever match today's partial bucket (see storeGdeltVolume). Every stored value
+// is "articles so far today", and the history is worth keeping under a name
+// that says so. Idempotent: nothing matches once renamed.
+function migrateVol24hToVolToday(db) {
+  const { n } = /** @type {any} */ (
+    db.prepare("SELECT COUNT(*) AS n FROM series WHERE metric LIKE '%vol24h'").get()
+  );
+  if (n === 0) return;
+  // INSERT OR REPLACE semantics aren't available to UPDATE; the (metric, ts)
+  // pairs are disjoint across the two names, so a plain UPDATE is safe.
+  db.exec("UPDATE series SET metric = replace(metric, 'vol24h', 'vol_today') WHERE metric LIKE '%vol24h'");
+  console.log(`[db] renamed ${n} *_vol24h series row(s) to *_vol_today (they were always partial-day counts)`);
 }
 
 // --- series -----------------------------------------------------------------

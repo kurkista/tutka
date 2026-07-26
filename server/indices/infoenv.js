@@ -7,14 +7,14 @@
 // v1: scoring moved from "level vs a frozen calendar-2025 baseline" to
 // "deviation from this metric's own trailing 30 days" — see ./deviation.js
 // for why v0 was arithmetically pinned at CALM.
-import { INFOENV } from '../config.js';
+import { INFOENV, DEVIATION_DAILY } from '../config.js';
 import { makeDomainIndex } from './domainIndex.js';
 
 const infoenv = makeDomainIndex({
   name: 'infoenv',
   config: INFOENV,
   components: [
-    { key: 'V', metric: 'gdelt_infoenv_vol24h', direction: 'high', zeroIsMissing: true },
+    { key: 'V', metric: 'gdelt_infoenv_vol_daily', direction: 'high', zeroIsMissing: true, tuning: DEVIATION_DAILY },
     { key: 'T', metric: 'gdelt_infoenv_tone', direction: 'low' },
   ],
 });

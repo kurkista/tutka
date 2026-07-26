@@ -11,14 +11,14 @@
 // July. That made this a season detector, and its ELEVATED reading the only
 // non-CALM signal on the whole site. Comparing the count to its own trailing
 // 30 days compares July to July, which is the seasonal fix.
-import { CLIMATE } from '../config.js';
+import { CLIMATE, DEVIATION_DAILY } from '../config.js';
 import { makeDomainIndex } from './domainIndex.js';
 
 const climate = makeDomainIndex({
   name: 'climate',
   config: CLIMATE,
   components: [
-    { key: 'V', metric: 'gdelt_climate_vol24h', direction: 'high', zeroIsMissing: true },
+    { key: 'V', metric: 'gdelt_climate_vol_daily', direction: 'high', zeroIsMissing: true, tuning: DEVIATION_DAILY },
     { key: 'T', metric: 'gdelt_climate_tone', direction: 'low' },
     { key: 'F', metric: 'firms_hotspot_count', direction: 'high' },
   ],

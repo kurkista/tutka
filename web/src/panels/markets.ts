@@ -6,7 +6,7 @@ import { t, fmtNum } from '../i18n';
 
 export async function init(state: AppState): Promise<void> {
   const nordic = state.modules.nordic;
-  renderNewsMeta(state.metrics.gdelt_nordic_vol24h?.value ?? null, state.metrics.gdelt_nordic_median30d?.value ?? null);
+  renderNewsMeta(state.metrics.gdelt_nordic_vol_daily?.value ?? null, state.metrics.gdelt_nordic_median30d?.value ?? null);
 
   const list = document.getElementById('headlines')!;
   list.innerHTML = '';
@@ -18,7 +18,7 @@ export async function init(state: AppState): Promise<void> {
 }
 
 export function onMetric(m: { metric: string; ts: number; value: number }): void {
-  if (m.metric === 'gdelt_nordic_vol24h') renderNewsMeta(m.value, null);
+  if (m.metric === 'gdelt_nordic_vol_daily') renderNewsMeta(m.value, null);
 }
 
 export function onHeadline(h: Headline): void {

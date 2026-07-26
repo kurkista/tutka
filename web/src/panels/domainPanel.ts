@@ -48,7 +48,7 @@ export function createDomainPanel(
     if (!el) return;
     try {
       const [vol, tone] = await Promise.all([
-        getSeries(`${vtSeriesPrefix}vol24h`),
+        getSeries(`${vtSeriesPrefix}vol_daily`),
         getSeries(`${vtSeriesPrefix}tone`),
       ]);
       trackChart(view, makeVTSparkline(el, vol, tone));

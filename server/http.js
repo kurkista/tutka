@@ -234,7 +234,7 @@ export function startHttp({ store }) {
     /** @type {Record<string, any>} */
     const daily = {};
     for (const m of [
-      'nordic_index', 'gdelt_nordic_vol24h', 'infoenv_index',
+      'nordic_index', 'gdelt_nordic_vol_daily', 'infoenv_index',
       'brent_usd', 'brent_sigma20', 'pw_total', 'pw_tanker', 'pw_cargo', 'pw_7dma', 'hpi',
     ]) {
       daily[m] = seriesSince(m, since).map((r) => [r.ts, r.value]);

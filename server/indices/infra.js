@@ -7,14 +7,14 @@
 // METHODOLOGY.md documents the rationale.
 //
 // v1: deviation-scored against its own trailing history — see ./deviation.js.
-import { INFRA } from '../config.js';
+import { INFRA, DEVIATION_DAILY } from '../config.js';
 import { makeDomainIndex } from './domainIndex.js';
 
 const infra = makeDomainIndex({
   name: 'infra',
   config: INFRA,
   components: [
-    { key: 'V', metric: 'gdelt_infra_vol24h', direction: 'high', zeroIsMissing: true },
+    { key: 'V', metric: 'gdelt_infra_vol_daily', direction: 'high', zeroIsMissing: true, tuning: DEVIATION_DAILY },
     { key: 'T', metric: 'gdelt_infra_tone', direction: 'low' },
   ],
 });

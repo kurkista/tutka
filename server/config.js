@@ -125,28 +125,55 @@ export const DEVIATION_BANDS = [
   { min: 0, name: 'NORMAL' },
 ];
 
-// Tuning for indices/deviation.js. zSpan is the headline knob: how many
-// robust deviations from the trailing median count as "as unusual as we
-// score". Calibrated against 528 real gdelt_nordic_vol24h and 394
+// Tuning for indices/deviation.js, for series the relay resamples many times
+// a day — tone, and the live layers. News *volume* is per-day and uses
+// DEVIATION_DAILY below.
+//
+// zSpan is the headline knob: how many robust deviations from the trailing
+// median count as "as unusual as we score". Calibrated against 394 real
 // gdelt_nordic_tone observations over a calm fortnight — zSpan 3 put the
 // simulated index at median 9, p90 50, max 72, i.e. NORMAL 74% of the time
 // and never EXTREME during a genuinely uneventful window. zSpan 2 fired
 // EXTREME on 2.7% of a calm fortnight, which is too loose to be believed.
+//
+// The volume half of that calibration used gdelt_nordic_vol24h, which we now
+// know was a within-day running total rather than a 24h count (see
+// storeGdeltVolume). Its spread was mostly time-of-day, so zSpan carries over
+// to the daily series as an estimate, not a measurement — recheck it against
+// real gdelt_*_vol_daily history.
 export const DEVIATION = {
   windowDays: 30,
   zSpan: 3,
-  // Score the median of a window, not the newest single sample: vol24h is a
-  // 24h rolling sum resampled every ~30 min by the relay. 12h is chosen from
-  // the shape of the real series — day-to-day medians carry the signal (they
-  // ran 45→340 over the first fortnight, MAD 48), while within-day scatter is
-  // dominated by relay timing and truncated responses. A 3h window tracked
-  // that scatter; a 12h one tracks the day.
+  // Score the median of a window, not the newest single sample: sub-daily
+  // scatter is dominated by relay timing and truncated responses rather than
+  // by the world. A 3h window tracked that scatter; a 12h one tracks the day.
   currentWindowMs: 12 * 3600_000,
   // Floors that stop a freshly-added domain declaring anomalies against its
   // own first afternoon. The relay writes ~48×/day, so these clear about
   // three days after a domain goes live.
   minSamples: 48,
   minSpanMs: 3 * 24 * 3600_000,
+};
+
+// GDELT news volume is scored per complete UTC day (see storeGdeltVolume for
+// why a sub-daily reading isn't available at timespan=30d), so the sample
+// floors above — written for a series the relay wrote ~48×/day — would need
+// 48 days to clear. One point per day needs its own tuning.
+//
+// The window is not accumulated over time: every ingest rewrites all 30 days
+// from GDELT's own payload, so these floors are met on a domain's first
+// successful fetch rather than a month later. That is what finally gets
+// domains 4/5/6 off "building baseline".
+export const DEVIATION_DAILY = {
+  ...DEVIATION,
+  windowDays: 30,
+  // One point per day: score the latest complete day itself, not a median of
+  // several. A one-day news spike *is* the signal here — averaging it with
+  // its neighbours is exactly the smoothing we don't want. A zero-length
+  // window makes currentReading fall through to the single latest point.
+  currentWindowMs: 0,
+  minSamples: 20,
+  minSpanMs: 14 * 24 * 3600_000,
 };
 
 // Monthly official statistics can never meet the sample floor above; they get
@@ -165,13 +192,17 @@ export const DEVIATION_MONTHLY = {
 // Deliberately just two honest signals, not forced into HPI's four-part shape.
 // ---------------------------------------------------------------------------
 export const INFOENV = {
-  version: 'infoenv-v1',
+  version: 'infoenv-v2',
   weights: { V: 0.6, T: 0.4 },
   bands: DEVIATION_BANDS,
   hysteresisPoints: 2,
   deviation: DEVIATION,
   stalenessMs: {
-    V: 3 * 3600_000,
+    // V is one point per complete UTC day, so the freshest possible reading
+    // is already 24h old at midnight and 48h old just before it. Anything
+    // tighter drops the component permanently. Relay outages stay visible
+    // through the jobs/staleness map, which watches the ingest itself.
+    V: 52 * 3600_000,
     T: 24 * 3600_000,
   },
   recomputeMs: 5 * 60_000,
@@ -187,13 +218,17 @@ export const INFOENV = {
 // See indices/nordic.js and METHODOLOGY.md.
 // ---------------------------------------------------------------------------
 export const NORDIC = {
-  version: 'nordic-v1',
+  version: 'nordic-v2',
   weights: { V: 0.6, T: 0.4 },
   bands: DEVIATION_BANDS,
   hysteresisPoints: 2,
   deviation: DEVIATION,
   stalenessMs: {
-    V: 3 * 3600_000,
+    // V is one point per complete UTC day, so the freshest possible reading
+    // is already 24h old at midnight and 48h old just before it. Anything
+    // tighter drops the component permanently. Relay outages stay visible
+    // through the jobs/staleness map, which watches the ingest itself.
+    V: 52 * 3600_000,
     T: 24 * 3600_000,
   },
   recomputeMs: 5 * 60_000,
@@ -213,13 +248,17 @@ export const NORDIC = {
 // See indices/infra.js and METHODOLOGY.md.
 // ---------------------------------------------------------------------------
 export const INFRA = {
-  version: 'infra-v1',
+  version: 'infra-v2',
   weights: { V: 0.6, T: 0.4 },
   bands: DEVIATION_BANDS,
   hysteresisPoints: 2,
   deviation: DEVIATION,
   stalenessMs: {
-    V: 3 * 3600_000,
+    // V is one point per complete UTC day, so the freshest possible reading
+    // is already 24h old at midnight and 48h old just before it. Anything
+    // tighter drops the component permanently. Relay outages stay visible
+    // through the jobs/staleness map, which watches the ingest itself.
+    V: 52 * 3600_000,
     T: 24 * 3600_000,
   },
   recomputeMs: 5 * 60_000,
@@ -242,7 +281,7 @@ export const INFRA = {
 // resolve. See indices/social.js and METHODOLOGY.md.
 // ---------------------------------------------------------------------------
 export const SOCIAL = {
-  version: 'social-v1',
+  version: 'social-v2',
   weights: { V: 0.4, T: 0.3, C: 0.3 },
   bands: DEVIATION_BANDS,
   hysteresisPoints: 2,
@@ -253,7 +292,11 @@ export const SOCIAL = {
   // 1995M10, so DEVIATION_MONTHLY's four-year window is real data rather than
   // an assumed range.
   stalenessMs: {
-    V: 3 * 3600_000,
+    // V is one point per complete UTC day, so the freshest possible reading
+    // is already 24h old at midnight and 48h old just before it. Anything
+    // tighter drops the component permanently. Relay outages stay visible
+    // through the jobs/staleness map, which watches the ingest itself.
+    V: 52 * 3600_000,
     T: 24 * 3600_000,
     C: 45 * 24 * 3600_000, // monthly survey; allow a bit over a month's slack
   },
@@ -300,13 +343,17 @@ export const SOCIAL = {
 //     pointed to instead. See indices/hybrid.js and METHODOLOGY.md.
 // ---------------------------------------------------------------------------
 export const HYBRID = {
-  version: 'hybrid-v1',
+  version: 'hybrid-v2',
   weights: { V: 0.6, T: 0.4 },
   bands: DEVIATION_BANDS,
   hysteresisPoints: 2,
   deviation: DEVIATION,
   stalenessMs: {
-    V: 3 * 3600_000,
+    // V is one point per complete UTC day, so the freshest possible reading
+    // is already 24h old at midnight and 48h old just before it. Anything
+    // tighter drops the component permanently. Relay outages stay visible
+    // through the jobs/staleness map, which watches the ingest itself.
+    V: 52 * 3600_000,
     T: 24 * 3600_000,
   },
   recomputeMs: 5 * 60_000,
@@ -357,7 +404,7 @@ export const HYBRID = {
 // See indices/climate.js and METHODOLOGY.md.
 // ---------------------------------------------------------------------------
 export const CLIMATE = {
-  version: 'climate-v1',
+  version: 'climate-v2',
   weights: { V: 0.4, T: 0.3, F: 0.3 },
   bands: DEVIATION_BANDS,
   hysteresisPoints: 2,
@@ -369,7 +416,11 @@ export const CLIMATE = {
   // own trailing 30 days compares July to July, which is the seasonal fix.
   deviation: DEVIATION,
   stalenessMs: {
-    V: 3 * 3600_000,
+    // V is one point per complete UTC day, so the freshest possible reading
+    // is already 24h old at midnight and 48h old just before it. Anything
+    // tighter drops the component permanently. Relay outages stay visible
+    // through the jobs/staleness map, which watches the ingest itself.
+    V: 52 * 3600_000,
     T: 24 * 3600_000,
     F: 24 * 3600_000,
   },
@@ -717,7 +768,8 @@ export const PUBLIC_METRICS = [
   'brent_intraday',
   'brent_sigma20',
   'poly_p',
-  'gdelt_vol24h',
+  'gdelt_vol_daily',
+  'gdelt_vol_today',
   'gdelt_median30d',
   'gdelt_tone',
   'pw_total',
@@ -726,31 +778,37 @@ export const PUBLIC_METRICS = [
   'pw_7dma',
   'hpi',
   // Domain 1 (Nordic tension) and domain 3 (Information environment) — live.
-  'gdelt_nordic_vol24h',
+  'gdelt_nordic_vol_daily',
+  'gdelt_nordic_vol_today',
   'gdelt_nordic_median30d',
   'gdelt_nordic_tone',
   'nordic_index',
-  'gdelt_infoenv_vol24h',
+  'gdelt_infoenv_vol_daily',
+  'gdelt_infoenv_vol_today',
   'gdelt_infoenv_median30d',
   'gdelt_infoenv_tone',
   'infoenv_index',
   // Domain 4 (Civic & critical infrastructure) and domain 5 (Social stability).
-  'gdelt_infra_vol24h',
+  'gdelt_infra_vol_daily',
+  'gdelt_infra_vol_today',
   'gdelt_infra_median30d',
   'gdelt_infra_tone',
   'infra_index',
-  'gdelt_social_vol24h',
+  'gdelt_social_vol_daily',
+  'gdelt_social_vol_today',
   'gdelt_social_median30d',
   'gdelt_social_tone',
   'social_index',
   'social_consumer_confidence',
   // Domain 2 (Hybrid & grey-zone threats).
-  'gdelt_hybrid_vol24h',
+  'gdelt_hybrid_vol_daily',
+  'gdelt_hybrid_vol_today',
   'gdelt_hybrid_median30d',
   'gdelt_hybrid_tone',
   'hybrid_index',
   // Domain 6 (Environmental & climate security).
-  'gdelt_climate_vol24h',
+  'gdelt_climate_vol_daily',
+  'gdelt_climate_vol_today',
   'gdelt_climate_median30d',
   'gdelt_climate_tone',
   'firms_hotspot_count',

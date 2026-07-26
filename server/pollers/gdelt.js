@@ -64,22 +64,30 @@ function timelinePoints(json) {
 // Each takes the per-module config (query/seriesPrefix/module — see
 // config.js's GDELT.modules) so two domains' news metrics never collide.
 
-/** 30d raw-volume timeline → {prefix}vol24h + {prefix}median30d. */
+/**
+ * 30d raw-volume timeline → {prefix}vol_daily (one point per complete UTC
+ * day), {prefix}vol_today (today's running partial) and {prefix}median30d.
+ *
+ * At `timespan=30d` GDELT answers in **daily** buckets, not the 15-minute
+ * ones this function was originally written against. That single fact broke
+ * the metric the whole news half of the site is scored on: "sum the buckets
+ * in the last 24h" could only ever match *today's* bucket, because
+ * yesterday's is stamped 00:00 and falls out of a rolling 24h window the
+ * instant the clock passes it. The stored series proves it — 16 days of
+ * gdelt_nordic_vol24h ramp monotonically from 0 at UTC midnight to ~290 by
+ * 23:47 and reset. It was never a 24-hour count; it was "articles so far
+ * today", i.e. a clock with news-shaped noise on it.
+ *
+ * So the scored series is now the complete-day total. Every ingest rewrites
+ * the whole 30-day window — `putSeries` is INSERT OR REPLACE keyed on the
+ * day's 00:00 UTC, so re-writing is idempotent, GDELT's own back-revisions
+ * are picked up, and a newly added domain gets a full baseline from its
+ * first successful fetch instead of waiting a month to accumulate one.
+ */
 export function storeGdeltVolume(volJson, now, cfg) {
   const points = timelinePoints(volJson);
   if (points.length === 0) throw new Error('gdelt: empty volume timeline');
 
-  // A 30d timeline can come back non-empty but with nothing in the last 24h —
-  // GDELT's index lags, or the relay got a truncated response. Summing that
-  // empty slice yields 0, and storing it claims "no news happened", which is
-  // indistinguishable from a genuinely quiet day and drags the baseline down.
-  // 07-10..07-25 history shows this firing inside almost every day (a rolling
-  // 24h sum dropping 546 → 0 → 546 is not something news does). Fail the job
-  // instead and let the existing staleness path surface it.
-  const recent = points.filter((p) => p.ts >= now - 24 * 3600_000);
-  if (recent.length === 0) throw new Error('gdelt: volume timeline has no buckets in the last 24h');
-
-  const vol24h = recent.reduce((a, p) => a + p.value, 0);
   /** @type {Record<string, number>} */
   const byDay = {};
   for (const p of points) {
@@ -87,12 +95,28 @@ export function storeGdeltVolume(volJson, now, cfg) {
     byDay[day] = (byDay[day] || 0) + p.value;
   }
   const today = new Date(now).toISOString().slice(0, 10);
-  const dailySums = Object.entries(byDay).filter(([d]) => d !== today).map(([, v]) => v).sort((a, b) => a - b);
-  const median30d = dailySums.length ? dailySums[Math.floor(dailySums.length / 2)] : 0;
 
-  putSeries(`${cfg.seriesPrefix}vol24h`, now, vol24h);
+  // Only complete days are scoreable. Today's bucket is a partial sum whose
+  // size depends on the hour we happened to ask, which is exactly the bug.
+  const complete = Object.entries(byDay).filter(([d]) => d < today).sort();
+  if (complete.length === 0) throw new Error('gdelt: volume timeline has no complete day');
+
+  for (const [day, total] of complete) {
+    putSeries(`${cfg.seriesPrefix}vol_daily`, Date.parse(`${day}T00:00:00Z`), total);
+  }
+
+  const dailySums = complete.map(([, v]) => v).sort((a, b) => a - b);
+  const median30d = dailySums[Math.floor(dailySums.length / 2)];
+
+  // Retained as live colour ("articles so far today"), never scored. Kept
+  // under an honest name — the old `vol24h` claimed a window it never had.
+  const volToday = byDay[today] ?? 0;
+  putSeries(`${cfg.seriesPrefix}vol_today`, now, volToday);
   putSeries(`${cfg.seriesPrefix}median30d`, now, median30d);
-  bus.emit('metric', { metric: `${cfg.seriesPrefix}vol24h`, ts: now, value: vol24h });
+
+  const latest = complete[complete.length - 1];
+  bus.emit('metric', { metric: `${cfg.seriesPrefix}vol_daily`, ts: Date.parse(`${latest[0]}T00:00:00Z`), value: latest[1] });
+  bus.emit('metric', { metric: `${cfg.seriesPrefix}vol_today`, ts: now, value: volToday });
 }
 
 /** Calm-period raw-volume timeline → {prefix}base_daily (the index's news-volume baseline). */
