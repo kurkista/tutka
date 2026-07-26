@@ -51,12 +51,28 @@ be constructed against a container that is already visible, and "visible" means
 the specific sub-view it lives in, not the route that contains it. A lazy-init
 key must name the element that has to have a size.
 
-**Caveat, stated because it matters:** this was verified as broken on
-production and the fix is verified as correct in structure, but **the fix
-itself could not be exercised in the local browser** — the sandbox's Web
-Workers cannot reach the tile CDN, so no map completes loading there
-regardless. Confirm on the live site after deploy: the legend element must
-exist and vessel markers must be visible.
+**Verification status — read this before trusting the entry.** Deployed
+(`128dbdc`). What is confirmed: the symptom was real on the live site (no
+`.map-legend` element, no markers, next to a sidebar counting 216 vessels,
+with tiles and labels rendering normally); the 0×0 construction is real and
+was measured directly, not inferred; and after deploy the live site now
+correctly defers construction until the Map sub-view is opened
+(`builtBeforeMapClick === false`).
+
+What is **not** confirmed: that the map now draws ships. The tooling browser
+used for this session stopped being able to load CARTO tiles partway through
+— every map in it renders black, local and production alike — and with no
+tile source loaded `load` cannot fire in any build, so a missing legend there
+proves nothing either way. The end state was therefore never observed. The
+causal chain from 0×0 to the production symptom is consistent with everything
+measured but is not proven, because production's tiles *did* load while its
+legend was missing, and locally a 0×0 map renders no tiles at all — those two
+observations do not sit together neatly.
+
+**To close this out**, open tutka.fly.dev in a normal browser, go to domain 1
+→ Map, and check that ship markers appear and the legend reads
+tanker/cargo/other/type unknown. If they do not, the 0×0 fix was necessary but
+not sufficient and the remaining cause is still open.
 
 ---
 
