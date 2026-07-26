@@ -2,7 +2,7 @@ import './styles.css';
 import { marked } from 'marked';
 import { initI18n, t } from './i18n';
 import { getState, getRoadmap } from './api';
-import type { Headline } from './types';
+import type { Headline, PublicEvent } from './types';
 import { connectSSE } from './sse';
 import { initMap, updateVessels, updateFlights, resizeMap } from './map';
 import { activate, onFirstView } from './lazyView';
@@ -13,6 +13,7 @@ import * as layers from './panels/layers';
 import * as welcome from './panels/welcome';
 import * as timeline from './panels/timeline';
 import * as dashboard from './panels/dashboard';
+import * as eventLog from './panels/eventLog';
 import { initMethodology } from './panels/methodology';
 import { createDomainPanel } from './panels/domainPanel';
 import { initDomainNav, setActiveDomain } from './panels/domainNav';
@@ -97,6 +98,7 @@ async function boot() {
       markets.onHeadline(h); layers.onHeadline();
     },
     flights: (data) => { updateFlights(data); layers.onFlights(data); },
+    event: (e: PublicEvent) => eventLog.prepend(e),
   });
 }
 
@@ -139,8 +141,21 @@ async function renderRoute(): Promise<void> {
   // `\d+`, not `\d` — the single-digit form silently failed to match
   // #domain/10 and fell through to the dashboard.
   const match = location.hash.match(/^#domain\/(\d+)$/);
+  const eventPermalinkMatch = location.hash.match(/^#event\/(\d+)$/);
+  const isEventsRoute = location.hash === '#events';
   const dashboardView = document.getElementById('dashboard-view')!;
   const domainView = document.getElementById('domain-view')!;
+  const eventsView = document.getElementById('events-view')!;
+
+  if (eventPermalinkMatch || isEventsRoute) {
+    dashboardView.hidden = true;
+    domainView.hidden = true;
+    eventsView.hidden = false;
+    if (eventPermalinkMatch) await eventLog.initPermalink(Number(eventPermalinkMatch[1]));
+    else await eventLog.init();
+    return;
+  }
+  eventsView.hidden = true;
 
   if (!match) {
     dashboardView.hidden = false;

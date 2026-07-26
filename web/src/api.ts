@@ -1,6 +1,6 @@
 // api.ts — the single data-read seam. If salmi is ever sundowned to a static
 // GitHub Pages build fed from data/export/, this is the only file to change.
-import type { AppState, SeriesData } from './types';
+import type { AppState, PublicEvent, SeriesData } from './types';
 
 async function getJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -32,3 +32,8 @@ export const getRoadmap = async (): Promise<string> => {
 
 export const getFirmsHotspots = () =>
   getJson<{ ts: number; points: { lat: number; lon: number }[] }>('/api/firms/hotspots');
+
+export const getEvents = (limit = 50, module?: string) =>
+  getJson<PublicEvent[]>(`/api/eventlog?limit=${limit}${module ? `&module=${module}` : ''}`);
+
+export const getEvent = (id: number) => getJson<PublicEvent>(`/api/eventlog/${id}`);

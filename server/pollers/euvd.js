@@ -5,7 +5,8 @@
 // rationale. Schema confirmed live 2026-07-24 via direct curl against
 // euvdservices.enisa.europa.eu — fields used below are real, not guessed.
 import { EUVD } from '../config.js';
-import { putHeadline } from '../db.js';
+import { putHeadline, insertEvent } from '../db.js';
+import { bus } from '../bus.js';
 
 export async function pollEuvd() {
   const res = await fetch(EUVD.apiUrl, {
@@ -22,10 +23,19 @@ export async function pollEuvd() {
     const firstRef = String(r.references || '').split('\n').map((s) => s.trim()).find(Boolean);
     const alias = String(r.aliases || '').split('\n').map((s) => s.trim()).find(Boolean);
     const title = `${r.id}${alias ? ` (${alias})` : ''}: ${String(r.description || '').slice(0, 140)}`;
-    putHeadline(
-      { ts: Number.isFinite(ts) ? ts : Date.now(), title, url: firstRef || `https://euvd.enisa.europa.eu/vulnerability/${r.id}`, source: 'ENISA EUVD', tone: null },
+    const eventTs = Number.isFinite(ts) ? ts : Date.now();
+    const url = firstRef || `https://euvd.enisa.europa.eu/vulnerability/${r.id}`;
+    const isNew = putHeadline(
+      { ts: eventTs, title, url, source: 'ENISA EUVD', tone: null },
       EUVD.module
     );
+    if (isNew) {
+      const row = insertEvent({
+        ts: eventTs, type: 'advisory', module: EUVD.module.replace(/_advisory$/, ''),
+        detail: { title, url, source: 'ENISA EUVD' },
+      });
+      bus.emit('event', row);
+    }
     stored++;
   }
   return stored;

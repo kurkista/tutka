@@ -151,5 +151,12 @@
   "domain.3.tab": "Information",
   "domain.4.tab": "Infrastructure",
   "domain.5.tab": "Social",
-  "domain.6.tab": "Climate"
+  "domain.6.tab": "Climate",
+  "events.title": "Event log",
+  "events.explainer": "Every band change, deviation spike, and advisory item across all domains — timestamped and permalinked. The site's memory: what moved, and when.",
+  "events.empty": "No events logged yet.",
+  "events.notFound": "That event doesn't exist — it may have been pruned, or the link is wrong.",
+  "events.backToLog": "← Full event log",
+  "event.bandChange": "{module} moved {from} → {to}",
+  "event.deviationSpike": "{module}: {component} deviating {dir} its norm"
 }

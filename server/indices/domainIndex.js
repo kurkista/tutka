@@ -16,10 +16,16 @@
 // every first-time reader, and the reason the band arc and the number
 // disagreed on screen.
 
-import { latestIndexSnapshot, putIndexSnapshot, putSeries, seriesSince } from '../db.js';
+import { latestIndexSnapshot, putIndexSnapshot, putSeries, seriesSince, insertEvent } from '../db.js';
 import { bus } from '../bus.js';
 import { computeIndex } from './engine.js';
 import { baselineFrom, currentReading, deviationScore } from './deviation.js';
+
+// Public-event-log spike gate. Deliberately stricter than deviation.js's
+// z>=1 "anomaly" label (that gate is meant to be loose — it labels
+// "unusually quiet" early); an *event* in the public log should mean
+// something rarer than the label already shown in the component breakdown.
+const SPIKE_Z = 2;
 
 /**
  * @typedef {Object} ComponentSpec
@@ -99,6 +105,14 @@ const round = (x, dp) => Math.round(x * 10 ** dp) / 10 ** dp;
  */
 export function makeDomainIndex({ name, config, components }) {
   let lastPersistTs = 0;
+  // Per-component spike state, tracked on every recompute tick regardless of
+  // whether this tick's snapshot gets persisted. gatherAndCompute() only
+  // *persists* a snapshot on band change or every config.snapshotMs (15 min),
+  // so comparing against the last *persisted* snapshot's anomaly would refire
+  // an event on every tick a component sat above SPIKE_Z between persists —
+  // this closure-local map is the actual de-dup boundary for spike events.
+  /** @type {Map<string, boolean>} */
+  const spikeState = new Map();
 
   /**
    * Pure-ish core: scores every component from the DB and combines them.
@@ -147,8 +161,26 @@ export function makeDomainIndex({ name, config, components }) {
     }
     bus.emit(`${name}_index`, snapshot);
     if (bandChanged) {
+      const row = insertEvent({
+        ts: snapshot.ts, type: 'band_change', module: name,
+        detail: { from: prev.band, to: snapshot.band, value: snapshot.value },
+      });
+      bus.emit('event', row);
       console.log(`[${name}] band change: ${prev.band} → ${snapshot.band} (${snapshot.value})`);
     }
+
+    for (const [key, c] of Object.entries(snapshot.components)) {
+      const spiking = Math.abs(c.raw.z) >= SPIKE_Z;
+      if (spiking && !spikeState.get(key)) {
+        const row = insertEvent({
+          ts: snapshot.ts, type: 'deviation_spike', module: name,
+          detail: { component: key, z: c.raw.z, value: c.raw.value, direction: c.raw.direction },
+        });
+        bus.emit('event', row);
+      }
+      spikeState.set(key, spiking);
+    }
+
     return snapshot;
   }
 

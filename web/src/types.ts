@@ -79,6 +79,18 @@ export interface DomainEvent {
   url: string;
 }
 
+/** The public event log (Tier 1) — persisted band flips, deviation spikes,
+ * and advisory items. Named distinctly from `DomainEvent` above (the
+ * hand-authored editorial timeline markers) — see server/db.js's comment on
+ * the `events` table for the full naming rationale. */
+export interface PublicEvent {
+  id: number;
+  ts: number;
+  type: 'band_change' | 'deviation_spike' | 'advisory';
+  module: 'nordic' | 'hybrid' | 'infoenv' | 'infra' | 'social' | 'climate';
+  detail: Record<string, unknown>;
+}
+
 export interface AisStatus {
   disabled: boolean;
   connected: boolean;

@@ -101,15 +101,17 @@ This is the retention problem underneath "it feels lame". A monitoring site
 you visit, see NORMAL, and close has no reason to be revisited. There is
 currently no "what happened", no archive, no way to be told something moved.
 
-- **Event log.** Persist band flips, deviation spikes above a threshold, and
-  advisory-feed items into one timestamped, permalinked stream. The
-  `index_snapshots` table already holds the raw material for the band-flip
-  half — an event is a diff between consecutive snapshots, not a new
-  collection job. Needs its own table for the derived events plus a render.
-  **Agreed 2026-07-26 as the next task to build.** Note this is the *public*
-  event log; the developer-facing one is `INCIDENT_LOG.md` and already exists.
-  The earlier instruction "then log (+log incidences)" meant the latter, and
-  the two were conflated for a while — keep them distinct.
+- **Event log. Built 2026-07-26.** Persists band flips, gated deviation
+  spikes (|z| ≥ 2), and advisory-feed items into one timestamped, permalinked
+  stream — `events` table (`server/db.js`), produced from
+  `server/indices/domainIndex.js` and the advisory pollers, served at
+  `/api/eventlog` + `/api/eventlog/:id`, broadcast live over the existing SSE
+  hub. Frontend: `#events` (list) and `#event/:id` (permalink) routes,
+  `web/src/panels/eventLog.ts`, reachable via the "Event log" button in the
+  domain nav bar. Note this is the *public* event log; the developer-facing
+  one is `INCIDENT_LOG.md` and already exists — the earlier instruction "then
+  log (+log incidences)" meant the latter, and the two were conflated for a
+  while, kept distinct here.
 - **Finland impact, made concrete.** Extend the Kerttu household translation
   beyond the current single figure: **unemployment rate** and **ostoskorin
   hinta** (grocery-basket price) as tracked series alongside it. Both are

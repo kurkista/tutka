@@ -11,7 +11,7 @@ import {
 } from './config.js';
 import {
   latestSeries, seriesSince, latestIndexSnapshot, firstIndexSnapshotTs, recentHeadlines,
-  vesselsDailySince, transitsSince,
+  vesselsDailySince, transitsSince, recentEvents, getEventById,
 } from './db.js';
 
 import { jobStatus } from './scheduler.js';
@@ -73,7 +73,7 @@ export function startHttp({ store }) {
     for (const res of clients) res.write(': ping\n\n');
   }, SSE.pingMs).unref?.();
 
-  for (const event of ['vessels', 'transit', 'nordic_index', 'infoenv_index', 'infra_index', 'social_index', 'hybrid_index', 'climate_index', 'metric', 'headline', 'flights']) {
+  for (const event of ['vessels', 'transit', 'nordic_index', 'infoenv_index', 'infra_index', 'social_index', 'hybrid_index', 'climate_index', 'metric', 'headline', 'flights', 'event']) {
     bus.on(event, (data) => broadcast(event, data));
   }
 
@@ -186,6 +186,20 @@ export function startHttp({ store }) {
   app.get('/api/events', (req, res) => {
     const module = typeof req.query.module === 'string' ? req.query.module : undefined;
     res.json(module ? (events[module] ?? []) : events);
+  });
+
+  // The *public event log* (Tier 1) — derived band flips, deviation spikes,
+  // and advisory items (see indices/domainIndex.js and the advisory
+  // pollers). Named /api/eventlog, not /api/events, precisely so it doesn't
+  // collide with the hand-authored editorial markers already served above.
+  app.get('/api/eventlog', (req, res) => {
+    const module = typeof req.query.module === 'string' ? req.query.module : undefined;
+    res.json(recentEvents(Math.min(Number(req.query.limit) || 50, 200), module));
+  });
+  app.get('/api/eventlog/:id', (req, res) => {
+    const row = getEventById(Number(req.params.id));
+    if (!row) return res.status(404).json({ error: 'not found' });
+    res.json(row);
   });
 
   app.get('/api/hilkka', (req, res) => res.json(computeHilkka()));

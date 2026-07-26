@@ -86,6 +86,23 @@ export function openDb(path) {
       version TEXT NOT NULL,
       PRIMARY KEY (index_name, ts)
     );
+
+    -- The public event log (Tier 1, ROADMAP.md): derived band flips,
+    -- deviation spikes, and advisory items, one row per event. Distinct from
+    -- both INCIDENT_LOG.md (developer-facing) and the hand-authored
+    -- DomainEvent/data/events.json timeline markers (editorial) — see
+    -- ROADMAP.md's Tier 1 section for why a third "event" concept needed
+    -- careful naming. detail follows the index_snapshots.components
+    -- precedent: a JSON blob whose shape depends on type, composed into
+    -- display text client-side rather than baked into English prose here.
+    CREATE TABLE IF NOT EXISTS events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      module TEXT NOT NULL,
+      detail TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_events_ts ON events (ts);
   `);
 
   migrateHpiSnapshots(db);
@@ -231,11 +248,18 @@ export function countVesselTypes() {
 
 // --- headlines ----------------------------------------------------------------
 
-/** @param {string} [module] which domain this headline belongs to (default 'hormuz') */
+/**
+ * @param {string} [module] which domain this headline belongs to (default 'hormuz')
+ * @returns {boolean} true only if this was a genuinely new row (url is UNIQUE,
+ *   so a repeat poll of an already-seen item is a silent no-op) — callers
+ *   that derive a second effect from "this headline is new" (e.g. the public
+ *   event log) key off this instead of re-deriving newness themselves.
+ */
 export function putHeadline(h, module = 'hormuz') {
-  db.prepare(
+  const r = db.prepare(
     'INSERT OR IGNORE INTO headlines (ts, title, url, source, tone, module) VALUES (?, ?, ?, ?, ?, ?)'
   ).run(h.ts, h.title, h.url, h.source ?? null, h.tone ?? null, module);
+  return r.changes > 0;
 }
 
 /** @param {string} [module] filter to one domain's headlines; omit for all */
@@ -299,6 +323,33 @@ export function firstIndexSnapshotTs(indexName, version) {
     db.prepare('SELECT MIN(ts) AS ts FROM index_snapshots WHERE index_name = ? AND version = ?').get(indexName, version)
   );
   return row?.ts ?? undefined;
+}
+
+// --- public event log ---------------------------------------------------------
+
+/** @param {{ts: number, type: string, module: string, detail: object}} e */
+export function insertEvent(e) {
+  const info = db.prepare(
+    'INSERT INTO events (ts, type, module, detail) VALUES (?, ?, ?, ?)'
+  ).run(e.ts, e.type, e.module, JSON.stringify(e.detail));
+  return /** @type {any} */ ({ id: Number(info.lastInsertRowid), ts: e.ts, type: e.type, module: e.module, detail: e.detail });
+}
+
+/** @param {string} [module] filter to one domain's events; omit for all */
+export function recentEvents(limit = 50, module) {
+  const rows = /** @type {any[]} */ (
+    module
+      ? db.prepare('SELECT * FROM events WHERE module = ? ORDER BY ts DESC LIMIT ?').all(module, limit)
+      : db.prepare('SELECT * FROM events ORDER BY ts DESC LIMIT ?').all(limit)
+  );
+  return rows.map((r) => ({ ...r, detail: JSON.parse(r.detail) }));
+}
+
+/** @param {number} id @returns {any | undefined} */
+export function getEventById(id) {
+  const row = /** @type {any} */ (db.prepare('SELECT * FROM events WHERE id = ?').get(id));
+  if (row) row.detail = JSON.parse(row.detail);
+  return row;
 }
 
 // --- maintenance ---------------------------------------------------------------

@@ -5,7 +5,8 @@
 // href>/<published>) — no new parsing code needed. Feed is already scoped to
 // severe-weather warnings only, so no keyword filtering, unlike Rajavartiolaitos.
 import { METEOALARM } from '../config.js';
-import { putHeadline } from '../db.js';
+import { putHeadline, insertEvent } from '../db.js';
+import { bus } from '../bus.js';
 import { parseRssItems } from './rss.js';
 
 export async function pollMeteoalarm() {
@@ -22,10 +23,18 @@ export async function pollMeteoalarm() {
     const xml = await res.text();
     const items = parseRssItems(xml);
     for (const item of items) {
-      putHeadline(
-        { ts: item.ts, title: `[${feed.country}] ${item.title}`, url: item.url, source: 'Meteoalarm', tone: null },
+      const title = `[${feed.country}] ${item.title}`;
+      const isNew = putHeadline(
+        { ts: item.ts, title, url: item.url, source: 'Meteoalarm', tone: null },
         METEOALARM.module,
       );
+      if (isNew) {
+        const row = insertEvent({
+          ts: item.ts, type: 'advisory', module: METEOALARM.module.replace(/_advisory$/, ''),
+          detail: { title, url: item.url, source: 'Meteoalarm' },
+        });
+        bus.emit('event', row);
+      }
     }
     total += items.length;
   }

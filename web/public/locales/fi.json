@@ -151,5 +151,12 @@
   "domain.3.tab": "Informaatio",
   "domain.4.tab": "Infrastruktuuri",
   "domain.5.tab": "Yhteiskunta",
-  "domain.6.tab": "Ilmasto"
+  "domain.6.tab": "Ilmasto",
+  "events.title": "Tapahtumaloki",
+  "events.explainer": "Jokainen luokkamuutos, poikkeamapiikki ja tiedote kaikilta osa-alueilta — aikaleimattuna ja pysyvällä linkillä. Sivuston muisti: mikä liikkui ja milloin.",
+  "events.empty": "Ei vielä kirjattuja tapahtumia.",
+  "events.notFound": "Tätä tapahtumaa ei löydy — se on voitu poistaa, tai linkki on virheellinen.",
+  "events.backToLog": "← Koko tapahtumaloki",
+  "event.bandChange": "{module} siirtyi: {from} → {to}",
+  "event.deviationSpike": "{module}: {component} poikkeaa {dir} normaalista"
 }

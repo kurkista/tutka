@@ -5,7 +5,8 @@
 // whose title matches RAJAVARTIOLAITOS.keywords are logged, under module
 // 'hybrid_advisory' — see config.js's RAJAVARTIOLAITOS block for rationale.
 import { RAJAVARTIOLAITOS } from '../config.js';
-import { putHeadline } from '../db.js';
+import { putHeadline, insertEvent } from '../db.js';
+import { bus } from '../bus.js';
 import { parseRssItems } from './rss.js';
 
 function matchesKeyword(title) {
@@ -22,7 +23,14 @@ export async function pollRajavartiolaitos() {
   const xml = await res.text();
   const items = parseRssItems(xml).filter((item) => matchesKeyword(item.title));
   for (const item of items) {
-    putHeadline({ ts: item.ts, title: item.title, url: item.url, source: 'Rajavartiolaitos', tone: null }, RAJAVARTIOLAITOS.module);
+    const isNew = putHeadline({ ts: item.ts, title: item.title, url: item.url, source: 'Rajavartiolaitos', tone: null }, RAJAVARTIOLAITOS.module);
+    if (isNew) {
+      const row = insertEvent({
+        ts: item.ts, type: 'advisory', module: RAJAVARTIOLAITOS.module.replace(/_advisory$/, ''),
+        detail: { title: item.title, url: item.url, source: 'Rajavartiolaitos' },
+      });
+      bus.emit('event', row);
+    }
   }
   return items.length;
 }
