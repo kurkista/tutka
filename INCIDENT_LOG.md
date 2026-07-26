@@ -8,9 +8,77 @@ something false, or a headline feature silently did nothing. **MEDIUM** = wrong
 or misleading behaviour that a careful reader would catch. **LOW** = friction,
 caught before it reached the site.
 
+Entries end in **RESOLVED** or **OPEN**. An OPEN entry is a known defect that
+has been measured but not fixed — read those first; they are live on the site
+right now.
+
 Entries below 2026-07-26 were backfilled from git history, METHODOLOGY.md and
 session memory on 2026-07-26, when this log was created. They are reconstructed
 rather than written at the time, and are marked as such.
+
+---
+
+## 2026-07-26 · MEDIUM · Every vessel is "other" — the tanker/cargo legend advertises two permanently empty categories · OPEN
+
+**What happened:**
+Domain 1's Live layers card reads `203 vessels in zone · 0 tankers+cargo`, and
+the map legend offers three categories of which two never appear. Checked
+against `/api/state` rather than the UI: of the 81 vessels carrying any detail,
+**68 have `type: null`** and the remaining 13 classify as "other". Zero tankers
+and zero cargo, with `uniqueLargeToday` at `{tankers: 0, cargo: 0}`.
+
+This is not plausible for the Gulf of Finland, which is one of the busiest
+tanker routes in Europe. The orange and blue markers visible on the map are
+*stationary* vessels drawn in the dot layer's fallback colour, not real
+tanker/cargo classifications — so the map looks like it is distinguishing ship
+types while the data behind it does not.
+
+**Root cause:** not yet established. `catOf()` in `web/src/map.ts` reads
+`v.type` and buckets 80–89 as tanker, 70–79 as cargo. The suspicion is
+upstream of the frontend: AIS ship type arrives in static (message type 5)
+reports, not in position reports, so either those are not subscribed, not
+merged into the vessel store, or dropped when a position update overwrites the
+record. `server/vessels.js` is where to start. **Do not assume** — the same
+guess ("the feed is too thin") was wrong about GDELT two entries down, and was
+only settled by measuring at the source.
+
+**Why it is MEDIUM and not LOW:** the site is showing a classification UI over
+a field that is empty. A reader sees a tanker/cargo/other legend and reasonably
+concludes we know which is which. Same family as the entries below — the
+broken state is indistinguishable from a legitimately quiet one, because "no
+tankers in the Gulf of Finland" renders identically to "we never parsed ship
+type".
+
+**Status:** found 2026-07-26 while verifying the vessel/aircraft icon change.
+Reported, not fixed — flagged to the owner rather than guessed at.
+
+---
+
+## 2026-07-26 · LOW · Ships and aircraft were the same triangle in two colours · RESOLVED
+
+**What happened:**
+The map drew one shared `vessel-arrow` SDF for both the vessel layer and the
+flight layer. A tanker and an airliner were the identical symbol, separated
+only by hue, so reading the map meant recognising a colour rather than a
+shape — and the colour axis was simultaneously being used for vessel category.
+Raised by the owner, not caught in review.
+
+**Root cause:**
+The flight layer was added after the vessel layer and reused the image already
+registered, which was named `vessel-arrow` and worked. Nothing failed, so
+nothing drew attention to it; the two layers had simply never been looked at
+side by side at map zoom.
+
+**Fix (`2b109cd`):**
+Two distinct SDFs — a hull (pointed bow, parallel sides, square stern) for
+vessels, an aircraft (fuselage, swept wings, tailplane) for flights. Colour is
+left to do one job only: vessel category. Icon sizes retuned, since both new
+shapes are longer than the triangle they replace, and both checked at the z6
+and z10 ends of the interpolation before shipping.
+
+**Rule added:**
+One visual channel, one meaning. If shape is already carrying "what kind of
+thing is this", colour must not be asked to carry it too.
 
 ---
 

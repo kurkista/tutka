@@ -143,8 +143,10 @@ currently no "what happened", no archive, no way to be told something moved.
   `index_snapshots` table already holds the raw material for the band-flip
   half — an event is a diff between consecutive snapshots, not a new
   collection job. Needs its own table for the derived events plus a render.
-  *(Open question for the owner: build this next, or keep scoping? The
-  original instruction — "then log then (+log incidences)" — read both ways.)*
+  **Agreed 2026-07-26 as the next task to build.** Note this is the *public*
+  event log; the developer-facing one is `INCIDENT_LOG.md` and already exists.
+  The earlier instruction "then log (+log incidences)" meant the latter, and
+  the two were conflated for a while — keep them distinct.
 - **Finland impact, made concrete.** Extend the Kerttu household translation
   beyond the current single figure: **unemployment rate** and **ostoskorin
   hinta** (grocery-basket price) as tracked series alongside it. Both are
