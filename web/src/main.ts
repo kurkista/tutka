@@ -15,6 +15,7 @@ import * as timeline from './panels/timeline';
 import * as dashboard from './panels/dashboard';
 import { initMethodology } from './panels/methodology';
 import { createDomainPanel } from './panels/domainPanel';
+import { initDomainNav, setActiveDomain } from './panels/domainNav';
 import {
   initInfraExtras, onInfraMetric,
   initSocialExtras, onSocialMetric,
@@ -120,7 +121,7 @@ let roadmapMd: string | null = null;
 
 function initRouter(): void {
   window.addEventListener('hashchange', renderRoute);
-  document.getElementById('domain-back-btn')!.addEventListener('click', () => { location.hash = ''; });
+  initDomainNav();
   renderRoute();
 }
 
@@ -140,6 +141,7 @@ async function renderRoute(): Promise<void> {
   const n = Number(match[1]);
   dashboardView.hidden = true;
   domainView.hidden = false;
+  setActiveDomain(n);
   for (const el of document.querySelectorAll<HTMLElement>('.domain-content')) el.hidden = true;
 
   const content = document.getElementById(`domain-content-${n}`);

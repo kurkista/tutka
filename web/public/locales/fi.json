@@ -2,7 +2,6 @@
   "dashboard.synthesisTitle": "Synteesi",
   "dashboard.coverage": "{n}/{total} osa-aluetta raportoi",
   "dashboard.domainLabel": "Osa-alue {n}",
-  "dashboard.back": "Takaisin etusivulle",
   "dashboard.noContent": "Kartoitettu, mutta ei vielä rakennettu — katso ROADMAP.md.",
   "domain.1.name": "Valtiollinen ja sotilaallinen jännite",
   "domain.1.summary": "Salmet, joukkoliikkeet, viralliset lausunnot",
@@ -144,5 +143,12 @@
   "tip.normal": "30 päivän normaali: {v}",
   "tip.deviation": "Poikkeama: {z}σ normaalista",
   "tip.baseline": "Vertailujakso: {d} vrk, {n} havaintoa",
-  "climate.mapEmpty": "Alueelta ei juuri nyt palautunut aktiivisia palopisteitä."
+  "climate.mapEmpty": "Alueelta ei juuri nyt palautunut aktiivisia palopisteitä.",
+  "nav.dashboard": "Etusivu",
+  "domain.1.tab": "Sotilaallinen",
+  "domain.2.tab": "Hybridi",
+  "domain.3.tab": "Informaatio",
+  "domain.4.tab": "Infrastruktuuri",
+  "domain.5.tab": "Yhteiskunta",
+  "domain.6.tab": "Ilmasto"
 }

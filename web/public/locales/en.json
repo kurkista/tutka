@@ -2,7 +2,6 @@
   "dashboard.synthesisTitle": "Synthesis",
   "dashboard.coverage": "{n} of {total} domains reporting",
   "dashboard.domainLabel": "Domain {n}",
-  "dashboard.back": "Back to dashboard",
   "dashboard.noContent": "Scouted but not built yet — see ROADMAP.md for what this would need.",
   "domain.1.name": "State & military tension",
   "domain.1.summary": "Chokepoints, troop movements, official statements",
@@ -144,5 +143,12 @@
   "tip.normal": "30-day normal: {v}",
   "tip.deviation": "Deviation: {z}σ from normal",
   "tip.baseline": "Baseline: {d} days, {n} samples",
-  "climate.mapEmpty": "No active-fire hotspots returned for this region right now."
+  "climate.mapEmpty": "No active-fire hotspots returned for this region right now.",
+  "nav.dashboard": "Dashboard",
+  "domain.1.tab": "Military",
+  "domain.2.tab": "Hybrid",
+  "domain.3.tab": "Information",
+  "domain.4.tab": "Infrastructure",
+  "domain.5.tab": "Social",
+  "domain.6.tab": "Climate"
 }

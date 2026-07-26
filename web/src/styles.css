@@ -141,12 +141,35 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
 
 #domain-view { display: flex; flex-direction: column; height: calc(100vh - 49px); }
 #domain-view[hidden] { display: none; }
-.domain-back {
-  flex: none; text-align: left; padding: 8px 16px; background: var(--surface);
-  border: none; border-bottom: 1px solid var(--border); color: var(--ink-2);
-  cursor: pointer; font-size: 13px; font-family: inherit;
+/* One row of pills: dashboard, then the six domains. Same shape and states as
+   the .view-btn / .range-btn toggles inside the views, so it reads as part of
+   the existing chrome rather than a second navigation system. */
+.domain-nav {
+  flex: none; display: flex; align-items: center; gap: 6px;
+  padding: 7px 14px; background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto; scrollbar-width: none;
 }
-.domain-back:hover { color: var(--ink); }
+.domain-nav::-webkit-scrollbar { display: none; }
+.domain-nav-btn {
+  flex: none; display: flex; align-items: center; gap: 6px;
+  background: none; border: 1px solid var(--border); color: var(--ink-2);
+  border-radius: 6px; padding: 4px 11px; font-size: 12px; font-family: inherit;
+  cursor: pointer; white-space: nowrap;
+}
+.domain-nav-btn:hover { border-color: var(--muted); color: var(--ink); }
+.domain-nav-btn.active { border-color: var(--accent); color: var(--ink); }
+/* The way back is not one of the six — separate it so the eye doesn't read
+   seven peers. */
+.domain-nav-btn.is-home { border-color: transparent; margin-right: 4px; }
+.domain-nav-btn.is-home:hover { border-color: var(--border); }
+.domain-nav-num {
+  font-family: var(--font-mono); font-size: 11px; color: var(--muted);
+}
+.domain-nav-btn.active .domain-nav-num { color: var(--accent); }
+@media (max-width: 720px) {
+  .domain-nav { padding: 7px 10px; }
+}
 .domain-content { flex: 1; min-height: 0; overflow-y: auto; }
 .domain-content[hidden] { display: none; }
 .split-layout { display: grid; grid-template-columns: 340px 1fr; gap: 0; }
