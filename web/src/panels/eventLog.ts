@@ -73,12 +73,18 @@ export function prepend(e: PublicEvent): void {
   while (list.children.length > 50) list.lastElementChild!.remove();
 }
 
+function ensureDashboardLink(): void {
+  document.getElementById('events-dashboard-link')!.textContent = `← ${t('nav.dashboard')}`;
+}
+
 export async function init(): Promise<void> {
+  ensureDashboardLink();
   document.getElementById('events-back-link')!.hidden = true;
   renderList(await getEvents());
 }
 
 export async function initPermalink(id: number): Promise<void> {
+  ensureDashboardLink();
   const list = document.getElementById('events-list')!;
   list.innerHTML = '';
   document.getElementById('events-back-link')!.hidden = false;
