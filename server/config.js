@@ -754,6 +754,24 @@ export const OPENSKY = {
   // 2-min cadence uses ~1440/day. On HTTP 429 we sit out a few runs.
   pollMs: 2 * 60_000,
   cooldownRuns: 5,
+
+  // --- position staleness, a GNSS-interference proxy -----------------------
+  // An aircraft state vector carries two clocks: `last_contact` (index 4, any
+  // signal at all) and `time_position` (index 3, the last *position* fix).
+  // Under normal reception they track each other within a second or two. When
+  // GNSS is jammed, aircraft keep transmitting — so `last_contact` keeps
+  // advancing while `time_position` freezes or goes null. The gap between the
+  // two is the observable.
+  //
+  // Note this is deliberately *not* the earlier idea of counting aircraft with
+  // no position at all: `states/all` filters by bounding box server-side, on
+  // position, so those aircraft are never in the response to begin with. An
+  // aircraft with a stale position inside the box *is* returned, with its last
+  // known coordinates — which is exactly the case worth counting.
+  posStaleSec: 30,
+  // Below this many aircraft the share is too noisy to mean anything (one
+  // stale aircraft out of four is 25%). Nights over the Gulf can get thin.
+  minAircraftForGps: 15,
 };
 
 export const SSE = {
@@ -818,6 +836,10 @@ export const PUBLIC_METRICS = [
   'nordic_vessels_in_zone',
   'nordic_unique_large_24h',
   'flights_count',
+  // Collected from 2026-07-26, not yet scored — needs 3 days of baseline
+  // before it can mean anything. Candidate component for domain 2 (hybrid),
+  // whose first listed concern is GPS jamming.
+  'gps_stale_pct',
   'elec_spot',
   'pump_e95',
   'pump_diesel',

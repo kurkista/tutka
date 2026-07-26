@@ -120,3 +120,91 @@ candidates, in rough priority order:
   `MODULE_KEY`, and `AppState.modules` extended in `types.ts`. Anything
   domain-specific beyond that (a Fingrid-style status widget, a scored
   third-component stat line) goes in `web/src/panels/domainExtras.ts`.
+
+---
+
+# Backlog — agreed 2026-07-26, in priority order
+
+Scoping notes from the "what would actually make this good" pass. Recorded
+here so the work isn't lost; nothing below is started.
+
+The prerequisites this pass identified (index v1's deviation scoring, then the
+v2 news-volume ingestion fix) are **done and live** — see METHODOLOGY.md's
+changelogs. Everything below assumes a signal that can actually move.
+
+## Tier 1 — the site has no memory
+
+This is the retention problem underneath "it feels lame". A monitoring site
+you visit, see NORMAL, and close has no reason to be revisited. There is
+currently no "what happened", no archive, no way to be told something moved.
+
+- **Event log.** Persist band flips, deviation spikes above a threshold, and
+  advisory-feed items into one timestamped, permalinked stream. The
+  `index_snapshots` table already holds the raw material for the band-flip
+  half — an event is a diff between consecutive snapshots, not a new
+  collection job. Needs its own table for the derived events plus a render.
+  *(Open question for the owner: build this next, or keep scoping? The
+  original instruction — "then log then (+log incidences)" — read both ways.)*
+- **Finland impact, made concrete.** Extend the Kerttu household translation
+  beyond the current single figure: **unemployment rate** and **ostoskorin
+  hinta** (grocery-basket price) as tracked series alongside it. Both are
+  StatFin/PxWeb-shaped, the same source domain 5's Consumer Confidence
+  Indicator already comes from, so the ingestion pattern exists. This is the
+  most differentiated thing on the site and currently sits behind a floating
+  button that overlaps the content.
+
+## Tier 2 — surface what's already good
+
+The inversion worth fixing: the weakest component (the index) is the entire
+front page, while the strongest ones are buried.
+
+- **Methodology honesty, in the product.** A public list of sources evaluated
+  *and rejected*, with dates and specific failure modes, is genuinely rare and
+  is the site's credibility asset. It currently lives only in a markdown file
+  served raw.
+- **Per-domain "why this number" panel** — the component breakdown, its
+  baseline, and how far from it, in plain language.
+
+## Tier 3 — the dependency timeline
+
+A sounder version of what the Salmi-era build attempted: one consolidated
+timeline showing **statements** (Trump, Musk, and other market/politics-moving
+accounts), **oil price**, and the domain indices on a shared time axis, so the
+dependencies and knock-on effects are visible rather than asserted.
+
+Why the earlier attempt didn't hold up, and what would have to be different:
+
+- **Sourcing.** The statement half needs a feed that is legal, free, and
+  stable. X/Twitter's API is neither free nor stable at this project's budget;
+  the previous version leaned on scraping-shaped sources. Candidates worth
+  checking before any build: Truth Social's public RSS-ish endpoints, the
+  Roll Call/`factba.se`-style transcript archives, and Bluesky's genuinely
+  open AT Protocol firehose. Check jurisdiction and pricing at the time, per
+  CLAUDE.md.
+- **Causality.** Putting two lines on one axis implies a claim. Either state
+  the correlation honestly with a lag window and a coefficient, or present it
+  explicitly as "these happened near each other" with no causal framing. The
+  earlier version implied more than it could support — that is the specific
+  thing to avoid repeating.
+- **Normalization.** The existing unified timeline min-maxes each series
+  independently, so a flights series that moved by 2 looks as dramatic as the
+  index. Any multi-series view needs the shared robust-z normalization
+  instead, or it is decoration.
+
+## Smaller, separable, and real
+
+Found during the same pass; each stands alone.
+
+- `prune()` targets metric names that no longer exist, while `flights_count`
+  grows ~260k rows/year unpruned (`server/db.js`).
+- `used[]` is asserted in every test but never persisted (`server/db.js`).
+- `/healthz` returns `ok: true` unconditionally, so Fly keeps a data-dead
+  machine in rotation.
+- No cache headers on any JSON route; the container runs as root.
+- `web/src/panels/timeline.ts` and friends hardcode their own palettes —
+  several sets, none reading the CSS custom properties, all diverging from
+  `:root` since the calm-theme rebrand.
+- `.split-layout` has no breakpoint, so five of six deep-dive views stay
+  `340px 1fr` on a 375px phone.
+- `gps_stale_pct` (collected from 2026-07-26) becomes scoreable after three
+  days of baseline — decide then whether it is domain 2's third component.

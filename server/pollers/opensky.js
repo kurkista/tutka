@@ -61,11 +61,12 @@ export async function pollOpenSky() {
   if (!res.ok) throw new Error(`opensky ${res.status}`);
   const data = await res.json();
 
-  // state vector indices: 0 icao24, 1 callsign, 5 lon, 6 lat, 7 baro alt (m),
-  // 8 on_ground, 10 true_track
+  // state vector indices: 0 icao24, 1 callsign, 3 time_position,
+  // 4 last_contact, 5 lon, 6 lat, 7 baro alt (m), 8 on_ground, 10 true_track
   latest.ts = (data.time ?? Math.floor(Date.now() / 1000)) * 1000;
-  latest.aircraft = (data.states || [])
-    .filter((s) => !s[8] && typeof s[5] === 'number' && typeof s[6] === 'number')
+  const airborne = (data.states || []).filter((s) => !s[8]);
+  latest.aircraft = airborne
+    .filter((s) => typeof s[5] === 'number' && typeof s[6] === 'number')
     .map((s) => ({
       icao: s[0],
       cs: (s[1] || '').trim() || null,
@@ -76,4 +77,34 @@ export async function pollOpenSky() {
     }));
   bus.emit('flights', { ts: latest.ts, aircraft: latest.aircraft });
   putSeries('flights_count', latest.ts, latest.aircraft.length);
+  storePositionStaleness(airborne, latest.ts);
 }
+
+/**
+ * Share of airborne aircraft whose *position* is older than their last
+ * contact — see OPENSKY.posStaleSec for what the two clocks mean.
+ *
+ * Collected, not yet scored. It needs a baseline before it can say anything
+ * (48 samples over 3 days, like every other component), and it is only ever
+ * meaningful as a deviation from this box's own normal: the same number also
+ * moves with receiver coverage and traffic geometry, which are roughly
+ * constant here but are absolutely not zero. Scoring the level would be the
+ * v0 mistake again, in a new domain.
+ */
+function storePositionStaleness(airborne, ts) {
+  let n = 0;
+  let stale = 0;
+  for (const s of airborne) {
+    if (typeof s[4] !== 'number') continue; // no contact clock — can't compare
+    n++;
+    // A null time_position on an aircraft the bbox query still returned means
+    // its last known position is old enough that OpenSky has no fresh fix.
+    if (typeof s[3] !== 'number' || s[4] - s[3] >= OPENSKY.posStaleSec) stale++;
+  }
+  // Below the floor the ratio is dominated by its own denominator. Writing
+  // nothing is right: a thin sky is missing data, not a quiet one.
+  if (n < OPENSKY.minAircraftForGps) return;
+  putSeries('gps_stale_pct', ts, (100 * stale) / n);
+}
+
+export const __test = { storePositionStaleness };

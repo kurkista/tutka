@@ -518,6 +518,36 @@ keyword list (`rajanylitys`, `turvapaikanhak`, `raja`, `rajavartio`,
 `itäraja`, `venäj`) before being logged under `hybrid_advisory` — same
 "shown, not scored" treatment as domain 4's NCSC-FI/EUVD/CERT-EU feeds.
 
+### GNSS interference, measured directly *(collected from 2026-07-26, not yet scored)*
+
+Every source above measures this domain by *talking about* it — news volume,
+press releases, annual PDFs. `gps_stale_pct` measures one slice of it
+directly, from a feed already being polled.
+
+An OpenSky state vector carries two clocks: `last_contact` (any signal at all)
+and `time_position` (the last position fix). Under normal reception they track
+each other within a second or two. Under GNSS jamming, aircraft keep
+transmitting while their position fix freezes or drops out — so the gap
+between the two clocks opens up. `gps_stale_pct` is the share of airborne
+aircraft in the box whose gap exceeds 30 s.
+
+Two things this is **not**:
+
+- It is not a count of aircraft with no position. `states/all` filters by
+  bounding box server-side, *on position*, so those aircraft never appear in
+  the response at all. Only an aircraft with a stale-but-known position inside
+  the box is returned — which is the case that carries the signal.
+- It is not a jamming *level*. The same number also moves with receiver
+  coverage and traffic geometry. It is only honest as a deviation from this
+  box's own trailing normal, which is roughly stable but certainly not
+  constant. Reported as a share, and below 15 aircraft nothing is written at
+  all, because a ratio over a thin sky is dominated by its denominator.
+
+It needs the standard baseline (48 samples over 3 days) before it can be
+scored. Whether it then becomes domain 2's third component — the one this
+domain was documented as not having — is a decision to make against real
+history, not in advance of it.
+
 ### Sources evaluated and rejected as automatable feeds
 
 Two research passes (2026-07-25) checked this domain's candidate sources
