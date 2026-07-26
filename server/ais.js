@@ -49,7 +49,7 @@ function connect(onMessage) {
   socket.addEventListener('open', () => {
     state.connected = true;
     state.lastMsgTs = Date.now();
-    console.log('[ais] connected, subscribing to Hormuz bounding box');
+    console.log('[ais] connected, subscribing to bounding box', JSON.stringify(AIS.boundingBox));
     socket?.send(JSON.stringify({
       APIKey: AIS.apiKey,
       BoundingBoxes: [AIS.boundingBox],

@@ -59,6 +59,7 @@
   "legend.tanker": "tankkeri",
   "legend.cargo": "rahtialus",
   "legend.other": "muu",
+  "legend.unknown": "tyyppi tuntematon",
   "legend.flights": "lennot",
   "map.gate": "läpikulkuportti",
   "map.kn": "solmua",

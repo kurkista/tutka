@@ -40,9 +40,15 @@ async function boot() {
   dashboard.init(state);
 
   // The map holds a WebGL context and measures its container, so it waits for
-  // domain 1 to actually be opened. SSE deltas arriving before then accumulate
-  // in map.ts's module state and are drawn when it builds.
-  onFirstView('1', () => {
+  // the map sub-view to actually be shown. SSE deltas arriving before then
+  // accumulate in map.ts's module state and are drawn when it builds.
+  //
+  // Keyed on the sub-view, not on domain 1, because domain 1 opens on the
+  // Timeline tab with #map still display:none. A MapLibre map constructed
+  // against a 0×0 container never finishes loading its style, and a later
+  // resize() does not restart it — so the whole layer stayed permanently
+  // unbuilt. See INCIDENT_LOG.md 2026-07-26.
+  onFirstView('1-map', () => {
     initMap(
       document.getElementById('map')!,
       state.modules.nordic.vessels,
@@ -111,6 +117,10 @@ function initViewToggle(): void {
     timelineBtn.classList.remove('active');
     mapView.hidden = false;
     timelineView.hidden = true;
+    // Build on the first show, once the container has a real size; resize on
+    // every later one. activate() runs its (synchronous) builder before
+    // yielding, so resizeMap() below still applies to a map that exists.
+    void activate('1-map');
     resizeMap();
   });
 }

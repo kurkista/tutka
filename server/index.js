@@ -7,7 +7,10 @@ import {
   ELECTRICITY, STATFIN, STOCKS, FX, OPENSKY, NCSCFI, EUVD, CERTEU, FINGRID,
   RAJAVARTIOLAITOS, FIRMS, METEOALARM,
 } from './config.js';
-import { openDb, putTransit, prune, transitsSince, upsertVesselsDaily, putSeries } from './db.js';
+import {
+  openDb, putTransit, prune, transitsSince, upsertVesselsDaily, putSeries,
+  loadVesselTypes, putVesselType,
+} from './db.js';
 import { VesselStore } from './vessels.js';
 import { startAis } from './ais.js';
 import { startHttp } from './http.js';
@@ -37,7 +40,14 @@ import { pollMeteoalarm } from './pollers/meteoalarm.js';
 
 openDb(DB_PATH);
 
+const knownTypes = loadVesselTypes();
+console.log(`[vessels] ${knownTypes.size} known MMSI→ship type mapping(s) loaded`);
+
 const store = new VesselStore({
+  knownTypes,
+  onTypeLearned(mmsi, shipType, name) {
+    putVesselType(mmsi, shipType, name);
+  },
   onTransit(t) {
     putTransit(t);
     bus.emit('transit', { ts: t.ts, mmsi: t.mmsi, name: t.name, dir: t.dir });

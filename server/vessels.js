@@ -27,12 +27,24 @@ const BBOX_PAD_DEG = 0.5;
 
 export class VesselStore {
   /**
-   * @param {{onTransit?: (t: any) => void}} [hooks]
+   * @param {{
+   *   onTransit?: (t: any) => void,
+   *   knownTypes?: Map<number, number>,
+   *   onTypeLearned?: (mmsi: number, shipType: number, name: string|null) => void,
+   * }} [hooks]
    */
   constructor(hooks = {}) {
     /** @type {Map<number, Vessel>} */
     this.vessels = new Map();
     this.onTransit = hooks.onTransit || (() => {});
+    // MMSI → ship type learned in earlier runs. Ship type only arrives in the
+    // periodic static broadcast, so without this a restart un-classifies the
+    // whole fleet until each vessel happens to send one again (measured: ~46%
+    // of Class A vessels do so in a given 8-minute window). Injected rather
+    // than read from db.js directly to keep this class pure and unit-testable.
+    /** @type {Map<number, number>} */
+    this.knownTypes = hooks.knownTypes || new Map();
+    this.onTypeLearned = hooks.onTypeLearned || (() => {});
     /** @type {number[]} */
     this.pendingRemovals = [];
     // Per-UTC-day sets of large vessels seen, for the daily aggregate.
@@ -93,9 +105,19 @@ export class VesselStore {
   /** @param {any} meta @param {any} stat @param {number} now */
   _static(meta, stat, now) {
     const v = this._get(meta.MMSI, now);
-    if (typeof stat.Type === 'number' && stat.Type > 0) v.shipType = stat.Type;
     const name = (stat.Name || meta.ShipName || '').trim();
     if (name) v.name = name;
+    if (typeof stat.Type === 'number' && stat.Type > 0) {
+      const changed = v.shipType !== stat.Type;
+      v.shipType = stat.Type;
+      // Remember it for future runs. Only on a change, so a vessel re-sending
+      // the same static report every few minutes isn't a repeated write.
+      if (changed) {
+        this.knownTypes.set(meta.MMSI, stat.Type);
+        this.onTypeLearned(meta.MMSI, stat.Type, v.name);
+        v.dirty = true; // the map is showing this one as "other" right now
+      }
+    }
     v.lastSeen = now;
     this._trackDailyPresence(v);
   }
@@ -105,7 +127,8 @@ export class VesselStore {
     let v = this.vessels.get(mmsi);
     if (!v) {
       v = {
-        mmsi, name: null, shipType: null, lat: 0, lon: 0, cog: null, sog: null,
+        mmsi, name: null, shipType: this.knownTypes.get(mmsi) ?? null,
+        lat: 0, lon: 0, cog: null, sog: null,
         hdg: null, lastSeen: now, gateSide: null, sideConfirmedTs: 0,
         lastTransitTs: 0, dirty: true,
       };

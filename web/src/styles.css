@@ -32,6 +32,10 @@
   --tanker: var(--series-2);
   --cargo: var(--series-1);
   --other: #7c8985;
+  /* Dimmer than --other on purpose: a vessel we have no ship type for is not
+     a vessel of type "other". Keeping them visually distinct is the whole
+     point — see INCIDENT_LOG.md 2026-07-26. */
+  --unknown: #4d5654;
 
   --status-good: #4c9a6b;
   --status-warning: #d6a24a;

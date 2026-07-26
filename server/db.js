@@ -39,6 +39,21 @@ export function openDb(path) {
       unique_cargo INTEGER
     );
 
+    -- MMSI → AIS ship type, learned from ShipStaticData (AIS message 5) and
+    -- remembered across restarts. A vessel's type is a property of the vessel,
+    -- but it only arrives in the periodic static broadcast, so an in-memory-only
+    -- store can classify a ship solely if it happens to catch one during that
+    -- ship's stay. Measured 2026-07-26: ~46% of Class A vessels emit a static
+    -- report in any given 8-minute window, so a freshly restarted process shows
+    -- most of the fleet as "other" — which reads as "no tankers here" rather
+    -- than "we haven't heard yet".
+    CREATE TABLE IF NOT EXISTS vessel_types (
+      mmsi INTEGER PRIMARY KEY,
+      ship_type INTEGER NOT NULL,
+      name TEXT,
+      updated_ts INTEGER NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS headlines (
       id INTEGER PRIMARY KEY,
       ts INTEGER NOT NULL,
@@ -186,6 +201,34 @@ export function vesselsDailySince(sinceDate) {
   );
 }
 
+// --- vessel type cache -------------------------------------------------------
+
+/**
+ * Every known MMSI → ship type, as a Map for the in-memory store to seed from.
+ * Loaded once at boot: the table is a few thousand rows for this bounding box,
+ * and a per-message SQL lookup on the AIS hot path would be the wrong trade.
+ * @returns {Map<number, number>}
+ */
+export function loadVesselTypes() {
+  const rows = /** @type {any[]} */ (db.prepare('SELECT mmsi, ship_type FROM vessel_types').all());
+  return new Map(rows.map((r) => [r.mmsi, r.ship_type]));
+}
+
+/** @param {number} mmsi @param {number} shipType @param {string|null} [name] */
+export function putVesselType(mmsi, shipType, name = null, ts = Date.now()) {
+  db.prepare(`
+    INSERT INTO vessel_types (mmsi, ship_type, name, updated_ts) VALUES (?, ?, ?, ?)
+    ON CONFLICT(mmsi) DO UPDATE SET
+      ship_type = excluded.ship_type,
+      name = COALESCE(excluded.name, vessel_types.name),
+      updated_ts = excluded.updated_ts
+  `).run(mmsi, shipType, name, ts);
+}
+
+export function countVesselTypes() {
+  return /** @type {any} */ (db.prepare('SELECT COUNT(*) AS n FROM vessel_types').get()).n;
+}
+
 // --- headlines ----------------------------------------------------------------
 
 /** @param {string} [module] which domain this headline belongs to (default 'hormuz') */
@@ -272,4 +315,9 @@ export function prune(now = Date.now()) {
       SELECT id FROM headlines ORDER BY ts DESC LIMIT 5000
     )
   `).run();
+  // A ship's type doesn't change, so these rows stay useful indefinitely — but
+  // an MMSI not seen in this bounding box for a year is not coming back often
+  // enough to be worth carrying, and the table is otherwise append-only.
+  db.prepare('DELETE FROM vessel_types WHERE updated_ts < ?')
+    .run(now - 365 * 24 * 3600_000);
 }

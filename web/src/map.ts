@@ -15,6 +15,7 @@ const COLORS = {
   tanker: token('--tanker', '#c98f4a'),
   cargo: token('--cargo', '#5b8dbe'),
   other: token('--other', '#7c8985'),
+  unknown: token('--unknown', '#4d5654'),
 };
 const FLIGHT_COLOR = token('--series-4', '#9085e9');
 const LEGEND_BG = token('--surface', '#1c2124');
@@ -28,9 +29,14 @@ let flightsVisible = true;
 let map: maplibregl.Map;
 let loaded = false;
 
-function catOf(type: number | null): 'tanker' | 'cargo' | 'other' {
-  if (type !== null && type >= 80 && type <= 89) return 'tanker';
-  if (type !== null && type >= 70 && type <= 79) return 'cargo';
+// `unknown` is deliberately not folded into `other`: AIS ship type arrives in a
+// periodic static broadcast, so a vessel can be on the map for minutes before
+// we are told what it is. Calling that "other" would state a classification we
+// don't have — the same shape of mistake as scoring a stale feed as calm.
+function catOf(type: number | null): 'tanker' | 'cargo' | 'other' | 'unknown' {
+  if (type === null) return 'unknown';
+  if (type >= 80 && type <= 89) return 'tanker';
+  if (type >= 70 && type <= 79) return 'cargo';
   return 'other';
 }
 
@@ -123,7 +129,12 @@ function flightsFC(): GeoJSON.FeatureCollection {
 }
 
 export function initMap(container: HTMLElement, initial: Vessel[], initialFlights: Aircraft[] = []): void {
-  for (const v of initial) vessels.set(v.mmsi, v);
+  // Boot-snapshot vessels are a fallback, not the truth: the map is now built
+  // on the first *map* view, which can be minutes after boot, and SSE deltas
+  // have been accumulating into `vessels` the whole time. Overwriting a live
+  // position with the one the page loaded with is the same mistake the flights
+  // seed made — so only fill in vessels we haven't heard about since.
+  for (const v of initial) if (!vessels.has(v.mmsi)) vessels.set(v.mmsi, v);
   // Seed from the boot snapshot only if no live tick has landed yet. The map
   // is built lazily on the first visit to domain 1, so by the time we get
   // here updateFlights() may already hold fresher aircraft than the state the
@@ -153,6 +164,7 @@ export function initMap(container: HTMLElement, initial: Vessel[], initialFlight
       'match', ['get', 'cat'],
       'tanker', COLORS.tanker,
       'cargo', COLORS.cargo,
+      'unknown', COLORS.unknown,
       COLORS.other,
     ];
 
@@ -277,7 +289,7 @@ function addLegend(container: HTMLElement) {
   el.className = 'map-legend';
   el.style.setProperty('--legend-bg', LEGEND_BG);
   el.style.setProperty('--legend-ink', LEGEND_INK);
-  el.innerHTML = (['tanker', 'cargo', 'other'] as const)
+  el.innerHTML = (['tanker', 'cargo', 'other', 'unknown'] as const)
     .map((c) => `<span style="color:${COLORS[c]}">●</span> ${t('legend.' + c)}`)
     .join('&nbsp;&nbsp;') +
     `&nbsp;&nbsp;<label style="cursor:pointer"><input type="checkbox" id="flights-toggle" checked> ` +

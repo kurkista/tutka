@@ -18,6 +18,106 @@ rather than written at the time, and are marked as such.
 
 ---
 
+## 2026-07-26 · HIGH · Domain 1's map has been drawing no ships at all · RESOLVED
+
+**What happened:**
+The flagship view renders a basemap and nothing else. No vessel markers, no
+aircraft, no legend — while the sidebar beside it read `216 vessels in zone ·
+52 tankers+cargo`. Confirmed on the live site, not just locally:
+`document.querySelectorAll('.map-legend').length` is `0` on tutka.fly.dev, and
+the map area is empty of markers at any zoom.
+
+**Root cause:**
+`initMap()` was registered as `onFirstView('1', …)`, so the map was constructed
+the moment domain 1 was opened. But domain 1 opens on the **Timeline** sub-view,
+so `#map` is `display:none` and measures 0×0 at that moment. Instrumented
+directly rather than inferred: `[map] initMap called, container size 0 x 0`,
+and three seconds later `loaded()=false styleLoaded=false`. A MapLibre map
+built against a zero-size container never finishes loading its style, and the
+later `resizeMap()` does not restart it — `map.style.tileManagers.carto.loaded()`
+stays `false` forever. Because `load` never fires, the handler that adds the
+sources, both layers and the legend never runs, and `updateVessels()` returns
+early at its `if (!loaded) return` guard for the life of the page.
+
+**Fix:** build the map when its own container is first shown, not when the
+domain is. The builder moved to `onFirstView('1-map', …)` and the Map button
+calls `activate('1-map')` after unhiding the view. Seeding was also changed to
+`if (!vessels.has(v.mmsi))` — now that construction can happen minutes after
+boot, the boot snapshot must not overwrite live positions that SSE has been
+accumulating in the meantime.
+
+**Rule added:** anything that measures its own box — MapLibre, ECharts — must
+be constructed against a container that is already visible, and "visible" means
+the specific sub-view it lives in, not the route that contains it. A lazy-init
+key must name the element that has to have a size.
+
+**Caveat, stated because it matters:** this was verified as broken on
+production and the fix is verified as correct in structure, but **the fix
+itself could not be exercised in the local browser** — the sandbox's Web
+Workers cannot reach the tile CDN, so no map completes loading there
+regardless. Confirm on the live site after deploy: the legend element must
+exist and vessel markers must be visible.
+
+---
+
+## 2026-07-26 · MEDIUM · "Zero tankers, zero cargo" was measured on a machine that had been up five minutes · RESOLVED
+
+**What happened:**
+The previous version of this entry claimed every vessel was permanently type
+`null`/"other", that the tanker and cargo legend categories were "permanently
+empty", and filed it OPEN with an unverified guess at the cause. **That
+finding was wrong**, and it is corrected here rather than quietly deleted.
+
+Re-measured at `/api/state`: 5 tankers and 6 cargo at 5 minutes of process
+uptime, 14 and 23 at 17 minutes, 52 tankers+cargo by 50 minutes. The `null`
+fraction fell 66% → 43% as uptime grew. Nothing was permanently empty; the
+sample was taken from a process that had restarted (my own deploy) five
+minutes earlier.
+
+**Root cause of the false reading:** measuring a cold machine and reporting the
+result as a defect. This is the **third** instance of the same mistake in two
+days — the flights layer was reported broken the same way the day before, and
+also turned out to be a post-deploy cold start. A restart empties the vessel
+store, and it refills over tens of minutes.
+
+**The real defect underneath, which is worth fixing:** ship type only arrives
+in the periodic AIS static broadcast (message 5), and it was held in memory
+only. Measured against the live stream over 8 minutes with no message-type
+filter: 385 `PositionReport` from 168 distinct MMSI, but only 84
+`ShipStaticData` from 78 — so **fewer than half** of Class A vessels announce
+their type in any given 8-minute window. Every restart therefore threw away all
+classification and spent tens of minutes relearning it.
+
+**Fix:** persist it. New `vessel_types` table (mmsi → ship type), loaded into
+a Map at boot and injected into `VesselStore`, which seeds each newly created
+vessel from it and writes back whenever a static report teaches it something
+new. Measured effect: at 110 seconds after a restart the store had 26 of 93
+vessels classified including 4 tankers and 3 cargo, where the previous build
+needed 13 minutes to reach 18. `uniqueLargeToday` is non-zero immediately
+instead of reporting `{0, 0}`.
+
+Ship type is also no longer folded into "other" in the UI. `catOf()` returns a
+distinct `unknown` category with its own dimmer colour and legend entry,
+because "we have not been told what this ship is" and "this ship is of type
+other" are different claims and the map was making the wrong one.
+
+**Rule added:** before reporting any live-data defect, check process uptime and
+say what it was. A feed that fills over time is indistinguishable from a broken
+one in the first minutes after a restart — `runs: 1` in `/api/state`'s `jobs`
+map is the tell. And when a measurement turns out to be wrong, correct the
+entry in place with the new numbers; a log that only accumulates confident
+mistakes is worse than none.
+
+**Also found, deliberately not acted on:** the AIS subscription takes only
+`PositionReport` and `ShipStaticData`, so Class B transponders are absent
+entirely — 140 distinct MMSI sending `StandardClassBPositionReport` and 75
+sending `StaticDataReport` (message 24) in that same 8-minute window. These are
+overwhelmingly leisure craft and small workboats in the Helsinki archipelago in
+July, which is arguably correct for a threat monitor rather than a traffic map,
+so including them is a product decision for the owner and not a bug fix.
+
+---
+
 ## 2026-07-26 · LOW · ROADMAP.md published the same section twice, and `/api/roadmap` served it that way for a day · RESOLVED
 
 **What happened:**
@@ -50,42 +150,6 @@ Published docs are a public surface with no test covering them. When a commit
 rewrites a doc section wholesale rather than editing in place, re-read the
 resulting file end to end — the failure mode is duplicated or orphaned prose,
 which git shows as ordinary added lines and no tooling here will catch.
-
----
-
-## 2026-07-26 · MEDIUM · Every vessel is "other" — the tanker/cargo legend advertises two permanently empty categories · OPEN
-
-**What happened:**
-Domain 1's Live layers card reads `203 vessels in zone · 0 tankers+cargo`, and
-the map legend offers three categories of which two never appear. Checked
-against `/api/state` rather than the UI: of the 81 vessels carrying any detail,
-**68 have `type: null`** and the remaining 13 classify as "other". Zero tankers
-and zero cargo, with `uniqueLargeToday` at `{tankers: 0, cargo: 0}`.
-
-This is not plausible for the Gulf of Finland, which is one of the busiest
-tanker routes in Europe. The orange and blue markers visible on the map are
-*stationary* vessels drawn in the dot layer's fallback colour, not real
-tanker/cargo classifications — so the map looks like it is distinguishing ship
-types while the data behind it does not.
-
-**Root cause:** not yet established. `catOf()` in `web/src/map.ts` reads
-`v.type` and buckets 80–89 as tanker, 70–79 as cargo. The suspicion is
-upstream of the frontend: AIS ship type arrives in static (message type 5)
-reports, not in position reports, so either those are not subscribed, not
-merged into the vessel store, or dropped when a position update overwrites the
-record. `server/vessels.js` is where to start. **Do not assume** — the same
-guess ("the feed is too thin") was wrong about GDELT two entries down, and was
-only settled by measuring at the source.
-
-**Why it is MEDIUM and not LOW:** the site is showing a classification UI over
-a field that is empty. A reader sees a tanker/cargo/other legend and reasonably
-concludes we know which is which. Same family as the entries below — the
-broken state is indistinguishable from a legitimately quiet one, because "no
-tankers in the Gulf of Finland" renders identically to "we never parsed ship
-type".
-
-**Status:** found 2026-07-26 while verifying the vessel/aircraft icon change.
-Reported, not fixed — flagged to the owner rather than guessed at.
 
 ---
 

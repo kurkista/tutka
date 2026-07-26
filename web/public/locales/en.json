@@ -60,6 +60,7 @@
   "legend.tanker": "tanker",
   "legend.cargo": "cargo",
   "legend.other": "other",
+  "legend.unknown": "type unknown",
   "legend.flights": "flights",
   "map.gate": "transit gate",
   "map.kn": "kn",
