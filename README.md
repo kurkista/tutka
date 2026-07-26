@@ -16,7 +16,8 @@ data stay in the repo (dormant, not deleted; see below), but no longer
 drive the live app. Domains 2, 3, 4, 5, and 6 followed the same GDELT-backed
 weighted-index shape. All six domains are now built — see
 **[ROADMAP.md](ROADMAP.md)** for fast-follow upgrade ideas that didn't make
-the first pass.
+the first pass, and **[INCIDENT_LOG.md](INCIDENT_LOG.md)** for what has gone
+wrong here and the rule each failure produced.
 
 | # | Domain | What it tracks | Status |
 |---|---|---|---|

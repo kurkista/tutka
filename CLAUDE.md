@@ -75,8 +75,28 @@ been approved in principle.
 **No new tracking/ceremony files**
 This is a one-person project — don't introduce session-log or status-file
 machinery (`SESSIONS.md`, `SESSION_NEXT.md`, etc.) uninvited. State lives in
-README/METHODOLOGY/ROADMAP, git history, and this file. If something new
-needs tracking, add a section here rather than proposing a new file.
+README/METHODOLOGY/ROADMAP/INCIDENT_LOG, git history, and this file. If
+something new needs tracking, add a section here rather than proposing a new
+file.
+
+**`INCIDENT_LOG.md` is the one exception, and it is required reading**
+Added at the owner's explicit request on 2026-07-26 — it is *not* uninvited
+machinery, do not remove it under the rule above. Same format the owner uses on
+their other projects: newest first, `date · severity · what happened · root
+cause · fix · rule added`.
+
+What goes in it: anything the site published that was false, any feature that
+silently did nothing, and any mistake worth not repeating — including my own
+process mistakes (a command that didn't parse, a metric proposed without
+reading the code that feeds it), not only production bugs. A fix is not done
+until its entry is written, in the same commit.
+
+Read it before working on scoring, on any GDELT/OpenSky/AIS ingestion path, or
+on anything version-scoped. Several entries there are the *reason* a piece of
+code looks the way it does, and at least three describe the same underlying
+mistake in different clothes: **a broken feed and a calm world render
+identically**, so nothing is verified until it has been shown to produce
+non-zero, plausible, moving data.
 
 **Scoring is deviation from a rolling baseline, not level vs a fixed one**
 Since v1 (2026-07-25) every component is scored against its own trailing 30
