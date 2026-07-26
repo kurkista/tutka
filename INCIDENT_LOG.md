@@ -59,20 +59,20 @@ was measured directly, not inferred; and after deploy the live site now
 correctly defers construction until the Map sub-view is opened
 (`builtBeforeMapClick === false`).
 
-What is **not** confirmed: that the map now draws ships. The tooling browser
-used for this session stopped being able to load CARTO tiles partway through
-— every map in it renders black, local and production alike — and with no
-tile source loaded `load` cannot fire in any build, so a missing legend there
-proves nothing either way. The end state was therefore never observed. The
-causal chain from 0×0 to the production symptom is consistent with everything
-measured but is not proven, because production's tiles *did* load while its
-legend was missing, and locally a 0×0 map renders no tiles at all — those two
-observations do not sit together neatly.
+**Closed out 2026-07-26 (later session):** confirmed live in a real browser —
+tutka.fly.dev → domain 1 → Map shows ship markers (hulls with heading, dots for
+stationary vessels) and aircraft markers, colour-matched to the legend
+(tanker/cargo/other/type unknown + flights toggle). The end state is now
+observed; the fix holds.
 
-**To close this out**, open tutka.fly.dev in a normal browser, go to domain 1
-→ Map, and check that ship markers appear and the legend reads
-tanker/cargo/other/type unknown. If they do not, the 0×0 fix was necessary but
-not sufficient and the remaining cause is still open.
+One false alarm along the way, worth recording: an automated pixel-scan of the
+map's WebGL canvas via `canvas.toDataURL()` read back **zero** non-grayscale
+pixels on the first two attempts, which looked like a real regression. A hard
+reload and a plain `computer` screenshot (not a `toDataURL()` readback) showed
+markers rendering correctly the whole time — `toDataURL()` on a WebGL canvas
+without `preserveDrawingBuffer` can read a cleared/swapped buffer instead of
+the presented frame. Rule: to check *what a WebGL canvas actually shows*, use
+a real screenshot tool, not a scripted canvas pixel read.
 
 ---
 

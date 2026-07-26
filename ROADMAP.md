@@ -158,11 +158,6 @@ Why the earlier attempt didn't hold up, and what would have to be different:
 
 ## Open loose ends from 2026-07-26
 
-- **Confirm domain 1's map actually draws ships.** One look in a normal
-  browser: tutka.fly.dev → domain 1 → Map. Markers on the water, legend
-  reading tanker/cargo/other/type unknown. The fix is deployed but its end
-  state was never observed — the session's tooling browser could not load map
-  tiles. Full detail in `INCIDENT_LOG.md`'s HIGH entry for that date.
 - **Class B vessels are absent from the map entirely.** The AIS subscription
   takes only `PositionReport` and `ShipStaticData`, so Class B transponders
   (~140 distinct MMSI per 8 minutes, plus their `StaticDataReport` type
