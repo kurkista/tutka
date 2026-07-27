@@ -174,7 +174,11 @@ export function makeDomainIndex({ name, config, components }) {
       if (spiking && !spikeState.get(key)) {
         const row = insertEvent({
           ts: snapshot.ts, type: 'deviation_spike', module: name,
-          detail: { component: key, z: c.raw.z, value: c.raw.value, direction: c.raw.direction },
+          // `c.raw.anomaly`, not `c.raw.direction`: direction is the
+          // component's fixed concerning side, anomaly is which way this
+          // tick actually moved — see the direction/anomaly note in
+          // web/src/reading.ts's componentWhy for the full explanation.
+          detail: { component: key, z: c.raw.z, value: c.raw.value, direction: c.raw.anomaly },
         });
         bus.emit('event', row);
       }

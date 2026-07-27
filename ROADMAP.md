@@ -125,17 +125,33 @@ you visit, see NORMAL, and close has no reason to be revisited. There was no
   (`national.unemploymentRate`, `national.groceryPct`),
   `web/src/panels/hilkka.ts` (two new tiles). Both series in `PUBLIC_METRICS`.
 
-## Tier 2 — surface what's already good
+## Tier 2 — surface what's already good. Built 2026-07-27.
 
 The inversion worth fixing: the weakest component (the index) is the entire
 front page, while the strongest ones are buried.
 
-- **Methodology honesty, in the product.** A public list of sources evaluated
-  *and rejected*, with dates and specific failure modes, is genuinely rare and
-  is the site's credibility asset. It currently lives only in a markdown file
-  served raw.
-- **Per-domain "why this number" panel** — the component breakdown, its
-  baseline, and how far from it, in plain language.
+- **Methodology honesty, in the product.** A dynamically-extracted,
+  domain-scoped "sources checked and rejected" `<details>` now sits inline in
+  each domain's deep-dive view (`web/src/panels/methodology.ts`'s
+  `renderRejectedSources`), reusing the same `## Domain N —` split idiom
+  `renderPlaceholder` already used for ROADMAP.md. Extraction is generic (a
+  loose `/evaluated|rejected/i` match against each domain's `###`
+  subsections in METHODOLOGY.md) rather than hardcoded per domain, so it
+  can't silently drift from the doc; domains with no such subsection (1, 4)
+  render nothing rather than a "nothing here" filler. The full
+  `#methodology-dialog` is unchanged and still the single source of truth.
+- **Per-domain "why this number" panel.** The component `<li>` rows
+  (`domainPanel.ts`, `status.ts`) are now `<details>/<summary>` — collapsed
+  by default, expanding to the same now/normal/deviation/baseline facts the
+  old native tooltip had (`web/src/reading.ts`'s `componentWhy`), plus one
+  plain-language sentence for which way the value is running. Also fixed:
+  domain 1's `status.ts` was still dumping `JSON.stringify(raw)` into a
+  hover tooltip — the exact "debugging affordance that shipped to users"
+  `reading.ts`'s own doc comment said was already fixed elsewhere.
+  Building this surfaced a real, already-deployed bug in the Tier 1 event
+  log — see `INCIDENT_LOG.md`'s 2026-07-27 entry — where `direction` (a
+  component's fixed concerning side) was used where `anomaly` (the actual
+  observed direction) was needed; fixed in the same commit.
 
 ## Tier 3 — the dependency timeline
 

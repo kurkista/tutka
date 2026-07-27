@@ -229,8 +229,26 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
   display: flex; justify-content: space-between; gap: 8px;
   padding: 4px 0; border-bottom: 1px solid var(--grid);
 }
+.components li > details { flex: 1; }
+.components summary {
+  display: flex; justify-content: space-between; gap: 8px;
+  cursor: pointer; list-style: none;
+}
+.components summary::-webkit-details-marker { display: none; }
+.components summary::after { content: '▸'; color: var(--muted); font-size: 10px; margin-left: 6px; }
+.components details[open] summary::after { content: '▾'; }
 .components .val { color: var(--ink); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .components .stale { color: var(--muted); font-style: italic; }
+.component-why { padding: 4px 0 8px; font-size: 12px; color: var(--muted); }
+.component-why p { margin: 2px 0; }
+
+.rejected-sources { margin-top: 8px; font-size: 12.5px; }
+.rejected-sources summary { cursor: pointer; color: var(--muted); }
+.rejected-sources summary:hover { color: var(--ink-2); }
+.rejected-sources[open] summary { color: var(--ink-2); margin-bottom: 6px; }
+.rejected-sources h3 { font-size: 13px; color: var(--ink); margin: 10px 0 4px; }
+.rejected-sources p { font-size: 12.5px; line-height: 1.45; margin: 0 0 6px; }
+.rejected-sources code { background: var(--page); padding: 1px 4px; border-radius: 4px; }
 
 .spark { height: 120px; }
 .chart { height: 240px; }

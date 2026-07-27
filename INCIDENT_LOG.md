@@ -18,6 +18,48 @@ rather than written at the time, and are marked as such.
 
 ---
 
+## 2026-07-27 · MEDIUM · Deviation-spike events could report the wrong direction · RESOLVED
+
+**What happened:**
+The public event log's `deviation_spike` events (`server/indices/domainIndex.js`,
+gated on `|z| >= SPIKE_Z`) stored `direction: c.raw.direction` — a value that
+is **fixed per component** (e.g. news tone is always `direction: 'low'`,
+because low tone is what's concerning for that component) — and rendered it
+as "above"/"below normal" in `eventLog.ts`. The spike gate itself is an
+absolute-value check with no regard to which side is concerning, so a
+benign-direction spike (e.g. tone swinging unusually *positive*) would still
+fire an event, and that event would say the value ran "below" normal —
+backwards from what actually happened.
+
+**Root cause:**
+Two different `raw.*` fields were conflated. `raw.direction` answers "which
+side is concerning for this component" — a static fact from config, the same
+on every tick. `raw.anomaly` answers "which way did the value actually move
+this tick" — computed from the current z-score's sign, and the only field
+that legitimately answers "which direction did this spike go." Found while
+building Tier 2's "why this number" panel, which needed to describe every
+component's actual direction (not just the concerning-direction cases
+`card.driver` was already safely describing, gated by score > 0).
+
+**Fix:** `direction: c.raw.direction` → `direction: c.raw.anomaly` in the
+event-detail object. `anomaly` is guaranteed `'high'|'low'` (never
+`'normal'`) at that point in the code, since `SPIKE_Z` (2) is strictly
+stricter than the `anomaly` label's own gate (`|z| >= 1`). No frontend or
+schema change needed — `eventLog.ts`'s rendering of the `direction` field was
+already correct; only the value the server wrote was wrong.
+
+**Rule added:** before using a `raw.*` field in user-facing text, check
+whether it's a fixed per-component config value or a per-observation
+computed value — a name like `direction` doesn't tell you which.
+
+**Verification status:** fixed pre-deploy, alongside the same-day Tier 2
+work. Not confirmed against a real production spike, since domains have
+produced few if any `|z| >= 2` events since the event log shipped a day
+earlier — the fix was verified via a temporary local test event before
+commit (see the Tier 2 session's verification notes), not observed live.
+
+---
+
 ## 2026-07-26 · HIGH · Domain 1's map has been drawing no ships at all · RESOLVED
 
 **What happened:**

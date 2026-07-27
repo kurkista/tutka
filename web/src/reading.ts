@@ -59,21 +59,39 @@ export function readingFor(snapshot: IndexSnapshot | null): Reading {
 }
 
 /**
- * Hover text for one component row. v0 dumped `JSON.stringify(raw)` here — a
- * debugging affordance that shipped to users. The same numbers, said plainly:
- * what it reads now, what its normal is, and how much history that normal is
- * built from, so the score is traceable rather than asserted.
+ * The four traceable facts behind one component's score: what it reads now,
+ * what its normal is, and how much history that normal is built from. v0
+ * dumped `JSON.stringify(raw)` here instead — a debugging affordance that
+ * shipped to users.
  */
-export function componentTooltip(c: IndexComponent): string {
+function tooltipLines(c: IndexComponent): string[] {
   const r = c.raw;
-  if (r.baselineMedian === undefined) return '';
+  if (r.baselineMedian === undefined) return [];
   const sign = (r.z ?? 0) >= 0 ? '+' : '';
   return [
     t('tip.now', { v: fmtNum(r.value ?? 0, 2) }),
     t('tip.normal', { v: fmtNum(r.baselineMedian, 2) }),
     t('tip.deviation', { z: `${sign}${fmtNum(r.z ?? 0, 2)}` }),
     t('tip.baseline', { d: fmtNum(r.baselineDays ?? 0, 1), n: String(r.baselineN ?? 0) }),
-  ].join('\n');
+  ];
+}
+
+/**
+ * The lines above, plus one plain-language sentence for which way the value
+ * is currently running — built from `anomaly` (the *observed* direction of
+ * this tick), never `direction` (the component's *fixed, configured*
+ * concerning side — e.g. tone is always direction:'low' even on a tick where
+ * it spiked unusually positive). Using `direction` here would describe a
+ * benign-direction excursion backwards.
+ */
+export function componentWhy(c: IndexComponent): string[] {
+  const lines = tooltipLines(c);
+  if (!lines.length) return [];
+  const { anomaly } = c.raw;
+  const plain = anomaly === 'high' || anomaly === 'low'
+    ? t('tip.outsideNormal', { dir: t(anomaly === 'low' ? 'dir.below' : 'dir.above') })
+    : t('tip.withinNormal');
+  return [...lines, plain];
 }
 
 /** `41 · NOTABLE`, or an em dash when there is nothing to report yet. */

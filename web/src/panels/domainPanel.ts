@@ -15,7 +15,8 @@ import { makeGauge, setGauge, makeVTSparkline } from '../charts';
 import { getSeries } from '../api';
 import { headlineChip } from '../headlineChip';
 import { onFirstView, trackChart } from '../lazyView';
-import { readingFor, componentTooltip } from '../reading';
+import { readingFor, componentWhy } from '../reading';
+import { renderRejectedSources } from './methodology';
 
 export interface DomainPanelController {
   init(mod: GenericDomainModule): void;
@@ -84,8 +85,10 @@ export function createDomainPanel(
       const li = document.createElement('li');
       const c = snapshot?.components[ck];
       if (c) {
-        li.innerHTML = `<span>${t('comp.' + ck)}</span><span class="val">${fmtNum(c.score, 0)}</span>`;
-        li.title = componentTooltip(c);
+        const why = componentWhy(c);
+        li.innerHTML = `<details><summary><span>${t('comp.' + ck)}</span>` +
+          `<span class="val">${fmtNum(c.score, 0)}</span></summary>` +
+          `<div class="component-why">${why.map((l) => `<p>${l}</p>`).join('')}</div></details>`;
       } else {
         // A missing component means "stale" only when the domain is otherwise
         // reporting. With no snapshot at all the cause is almost always too
@@ -121,6 +124,7 @@ export function createDomainPanel(
       renderList(`${key}-headlines`, mod.headlines);
       if (hasAdvisories) renderList(`${key}-advisories`, mod.advisories ?? []);
       onFirstView(view, () => { buildGauge(); return buildVTChart(); });
+      void renderRejectedSources(key, Number(view));
     },
     onIndex(snapshot: IndexSnapshot): void {
       renderIndex(snapshot);

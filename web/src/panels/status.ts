@@ -7,7 +7,8 @@ import type { AppState, IndexSnapshot } from '../types';
 import { t, fmtNum } from '../i18n';
 import { makeGauge, setGauge } from '../charts';
 import { onFirstView, trackChart } from '../lazyView';
-import { readingFor } from '../reading';
+import { readingFor, componentWhy } from '../reading';
+import { renderRejectedSources } from './methodology';
 
 const COMPONENT_KEYS = ['V', 'T'] as const;
 
@@ -21,6 +22,7 @@ export async function init(s: AppState): Promise<void> {
     trackChart('1', gauge);
     setGauge(gauge, latest?.value ?? null);
   });
+  void renderRejectedSources('hpi', 1);
 }
 
 export function onNordicIndex(snapshot: IndexSnapshot): void {
@@ -47,8 +49,10 @@ function renderIndex(snapshot: IndexSnapshot | null): void {
     const li = document.createElement('li');
     const c = snapshot?.components[key];
     if (c) {
-      li.innerHTML = `<span>${t('comp.' + key)}</span><span class="val">${fmtNum(c.score, 0)}</span>`;
-      li.title = JSON.stringify(c.raw);
+      const why = componentWhy(c);
+      li.innerHTML = `<details><summary><span>${t('comp.' + key)}</span>` +
+        `<span class="val">${fmtNum(c.score, 0)}</span></summary>` +
+        `<div class="component-why">${why.map((l) => `<p>${l}</p>`).join('')}</div></details>`;
     } else {
       li.innerHTML = `<span>${t('comp.' + key)}</span><span class="stale">${t('comp.stale')}</span>`;
     }
