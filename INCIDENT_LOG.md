@@ -18,6 +18,44 @@ rather than written at the time, and are marked as such.
 
 ---
 
+## 2026-07-27 · LOW · Dependency-timeline rejected-sources panel would have rendered empty forever · RESOLVED
+
+**What happened:**
+Tier 3 chunk 4 added a new METHODOLOGY.md section ("Dependency timeline —
+statements, oil, and the domain indices") with three tiers of sources:
+in-use, logged-for-later, and not-viable. The last two were headed `###
+Logged for possible later use` and `### Not viable`. Neither heading matches
+`web/src/panels/methodology.ts`'s `rejectedSubsections()` extraction, which
+only pulls `###` subsections whose heading text matches
+`/evaluated|rejected/i` — the same regex every other domain's "Sources
+evaluated and rejected..." heading was written to satisfy. The new
+`#dep-rejected` `<details>` block would have stayed permanently hidden/empty:
+no error anywhere, correct-looking METHODOLOGY.md, correct-looking chart —
+just a silent no-op on the one new UI element built specifically to surface
+this content.
+
+**Root cause:**
+Wrote the new section's headings for readability (matching the plan file's
+own "three tiers" language) without checking them against the actual
+extraction regex in `methodology.ts` — assumed the domain-section precedent
+("Sources evaluated and rejected...") would generalize by convention, not by
+verifying the string match.
+
+**Fix:**
+Renamed both headings to `### Sources evaluated and logged for possible
+later use` and `### Sources evaluated and rejected as not viable` — both now
+match, both render. Confirmed in-browser (EN+FI) before shipping, not just
+via typecheck.
+
+**Rule added:**
+Any new METHODOLOGY.md subsection intended to feed the rejected-sources
+panel must have "evaluated" or "rejected" literally in its `###` heading —
+check it against `methodology.ts`'s regex, don't assume from precedent. A
+passing `tsc` and a rendered page don't catch this; only opening the
+`<details>` and confirming it's non-empty does.
+
+---
+
 ## 2026-07-27 · MEDIUM · Deviation-spike events could report the wrong direction · RESOLVED
 
 **What happened:**
