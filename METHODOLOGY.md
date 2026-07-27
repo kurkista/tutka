@@ -785,6 +785,121 @@ follow-up.
 
 ---
 
+## Dependency timeline — statements, oil, and the domain indices
+
+*Built 2026-07-27.*
+
+ROADMAP.md's Tier 3 asked for one consolidated timeline: **statements**
+(originally scoped as Trump/Musk/market-moving social posts), **oil price**,
+and the six domain indices on a shared time axis — a sounder version of what
+the Salmi-era Hormuz build attempted, this time honest about correlation vs
+causation and using real normalization.
+
+Two things changed from that original scope, both load-bearing:
+
+- **Normalization was already solved**, not new work. `web/src/charts.ts`'s
+  `makeUnifiedTimeline` (built for domain 1's own timeline view) already
+  overlays every series on the shared robust-z axis — the same
+  median/MAD math `server/indices/deviation.js` scores with — instead of
+  the independent min-max scaling ROADMAP.md's causality concern was really
+  about. Reused as-is.
+- **Statements, as originally scoped, have no legal, free, stable source.**
+  Truth Social's only real API is a paid institutional feed
+  ($60–100k/month); X/Twitter dropped its free tier entirely in Feb 2026
+  (pay-per-use only); factba.se/Roll Call transcript archives are
+  paywalled with no public API. This is the same "isn't a gap that more
+  searching will fix" outcome Domain 2's own sourcing hit. Redirected scope:
+  track **official statements from high-reach institutions** —
+  governments, central banks, UN agencies, and NGOs — instead of raw social
+  posts, reusing the event-log infrastructure Tier 1 already built.
+
+The chart makes no causal claim: a fixed caption under it reads "Shown on
+the same axis for comparison — not a claim that one caused another," and no
+lag window or correlation coefficient is computed.
+
+### In use
+
+Thirteen sources, one generic RSS poller (`server/pollers/statements.js`),
+15-minute poll interval, logged as `official_statement` events:
+
+| Source | Feed | Latency | Notes |
+|---|---|---|---|
+| The White House | `whitehouse.gov/news/feed` | minutes | public domain |
+| US Federal Reserve | `federalreserve.gov/feeds/press_monetary.xml` | minutes | FOMC/monetary only |
+| Bank of England | `bankofengland.co.uk/rss/news` | minutes | |
+| European Central Bank | `ecb.europa.eu/rss/press.html` | minutes | `.html` URL, serves RSS 2.0 XML |
+| UN Secretary-General | `press.un.org/en/rss.xml` | minutes | filtered to `sgsm`/`sgt`/`sga` URL slugs — the general feed mixes in GA/Security Council/daily-briefing items |
+| European Commission | `ec.europa.eu/commission/presscorner/api/rss` | ~daily | one bundled "Daily News" digest item/day, not per-release |
+| Council of the EU | `consilium.europa.eu/en/rss/pressreleases.ashx` | minutes | the human-facing directory page 403s non-browser clients; the `.ashx` URL is the real feed |
+| NASA | `nasa.gov/news-release/feed/` | same-day | public domain |
+| IAEA (Director General) | `iaea.org/feeds/dgstatements` | days | most explicit reuse-friendly ToS of all sources checked |
+| World Health Organization | `who.int/rss-feeds/news-english.xml` | days | full text in feed; only metadata extracted |
+| Greenpeace International | `greenpeace.org/international/press-release/feed/` | days | permissive `robots.txt`, no anti-scraping clause — cleanest ToS of any source checked |
+| ICRC | `icrc.org/en/rss/news` | days | mixed news/statements/reports feed |
+| SUPO (Finnish Security Intelligence Service) | `supo.fi` press-releases RSS | days | found via a follow-up scout on the owner's own 2025 blog post lamenting no public SUPO feed — one now exists |
+
+### Sources evaluated and logged for possible later use
+
+Not wired in — revisit if the blocker clears; both are otherwise a
+one-config-entry add to `STATEMENTS.sources`:
+
+- **IMF** — the RSS works technically, but the IMF's ToS explicitly
+  prohibits "bulk download of information by automated technology without
+  explicit permission," which regular polling plausibly falls under.
+  Don't include without emailing copyright@imf.org for clarity first.
+- **Amnesty International** — the feed (`amnesty.org/en/feed/`) works
+  technically but (a) is Cloudflare-blocked for a plain server-side fetch —
+  only loads from a real browser session — and (b) their Terms of Use
+  explicitly ban automated scraping/data-mining and separately ban
+  AI-training on their content. Both a technical and a legal blocker;
+  don't include without contacting Amnesty directly.
+
+### Sources evaluated and rejected as not viable
+
+Checked and rejected, documented as an honest gap rather than built around:
+
+- **WWF** — no usable feed at any level. WWF International's legacy
+  panda.org/Feedburner feed is dead (TLS failure / 404); WWF-US has no RSS
+  link at all and sits behind a Cloudflare bot-wall; WWF's own Terms
+  explicitly prohibit "data collection, extraction or mining."
+- **NATO** — RSS discontinued sitewide as of 2026 (confirmed via Wayback
+  CDX history, 404 since at least January); no replacement machine-readable
+  feed exists.
+- **IEA** — no RSS/API for press releases at all, despite being the single
+  most oil-relevant source checked; only a paid statistics API and email
+  newsletters.
+- **OPEC** — a feed URL exists but is Cloudflare-bot-gated (blocks
+  server-side fetches), and its cached copy showed 3+-year-old stale items.
+- **World Bank** — no press-release RSS/API, only blog RSS and a
+  statistical-indicators API (not news).
+- **US Treasury** — a feed almost certainly exists (site copy references
+  RSS capability) but the exact URL couldn't be confirmed, and the site
+  blocks automated fetches. Worth a manual browser check later, not built
+  now.
+
+If the oil-market-specific angle is ever prioritized over general
+institutional statements, **EIA** (`eia.gov/tools/rssfeeds`, US-government,
+reliable) is a fallback proxy for IEA/OPEC's missing announcements.
+
+### Oil price
+
+Brent crude (`brent_usd`, `brent_intraday`, `brent_sigma20`) is the same
+Yahoo-primary/FRED-fallback poller (`server/pollers/brent.js`) built for the
+dormant Hormuz Passability Index (see the appendix below), reactivated
+rather than rebuilt — it was deliberately left in full working order, just
+unscheduled, when Hormuz retired. Reactivating it also fixed a live, silent
+regression: the Finland-impact drawer's "Brent vs pre-crisis" tile had been
+going stale since nothing wrote `brent_usd` after Hormuz was unscheduled.
+
+### Changelog
+
+- **dep-v0** (2026-07-27) — first release. Brent reactivated; 13-source
+  official-statement RSS poller; `PublicEvent` widened to carry
+  non-domain-scoped events; cross-domain timeline view (six domain indices
+  + Brent, shared robust-z axis, official-statement markLine markers).
+
+---
+
 ## Appendix — the dormant Hormuz Passability Index
 
 *Version: **hpi-v0** (frozen; not actively computed)*

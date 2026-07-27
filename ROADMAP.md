@@ -153,31 +153,81 @@ front page, while the strongest ones are buried.
   component's fixed concerning side) was used where `anomaly` (the actual
   observed direction) was needed; fixed in the same commit.
 
-## Tier 3 — the dependency timeline
+## Tier 3 — the dependency timeline. Built 2026-07-27.
 
 A sounder version of what the Salmi-era build attempted: one consolidated
-timeline showing **statements** (Trump, Musk, and other market/politics-moving
-accounts), **oil price**, and the domain indices on a shared time axis, so the
-dependencies and knock-on effects are visible rather than asserted.
+timeline showing statements, oil price, and the six domain indices on a
+shared time axis, so what moves together is visible rather than asserted.
+Full source list (in-use / logged-for-later / not-viable) and the causality
+framing are in METHODOLOGY.md's **"Dependency timeline — statements, oil,
+and the domain indices"** section — not repeated here.
 
-Why the earlier attempt didn't hold up, and what would have to be different:
+Scope changed from the original ask in one deliberate way: raw
+Trump/Musk-style social posts had no legal, free, stable source (Truth
+Social is a paid institutional feed; X/Twitter dropped its free tier in Feb
+2026), so the "statements" half became **official statements from
+governments, central banks, UN agencies, and NGOs** instead — a redirection,
+not a scope cut. Normalization needed no new work: `web/src/charts.ts`'s
+existing shared robust-z axis (built for domain 1's own timeline) covers the
+causality concern ROADMAP originally raised about min-max scaling.
 
-- **Sourcing.** The statement half needs a feed that is legal, free, and
-  stable. X/Twitter's API is neither free nor stable at this project's budget;
-  the previous version leaned on scraping-shaped sources. Candidates worth
-  checking before any build: Truth Social's public RSS-ish endpoints, the
-  Roll Call/`factba.se`-style transcript archives, and Bluesky's genuinely
-  open AT Protocol firehose. Check jurisdiction and pricing at the time, per
-  CLAUDE.md.
-- **Causality.** Putting two lines on one axis implies a claim. Either state
-  the correlation honestly with a lag window and a coefficient, or present it
-  explicitly as "these happened near each other" with no causal framing. The
-  earlier version implied more than it could support — that is the specific
-  thing to avoid repeating.
-- **Normalization.** The existing unified timeline min-maxes each series
-  independently, so a flights series that moved by 2 looks as dramatic as the
-  index. Any multi-series view needs the shared robust-z normalization
-  instead, or it is decoration.
+Built: `server/pollers/brent.js` reactivated (also fixed a live regression —
+the Finland-impact drawer's Brent tile had gone stale since Hormuz was
+unscheduled); `server/pollers/statements.js`, a generic 13-source RSS
+poller (`server/config.js`'s `STATEMENTS`); `PublicEvent` widened
+(`web/src/types.ts`) for non-domain-scoped events; the `#dependencies` view
+(`web/src/panels/dependencyTimeline.ts`) — six domain indices + Brent on the
+shared axis, official-statement events as markLine markers, a fixed
+"not a claim that one caused another" disclaimer, and the same
+sources-evaluated-and-rejected `<details>` panel Tier 2 built for the six
+domains.
+
+### Blog-post source follow-up
+
+The owner's 2025 post (kurkista.fi/2025/04/05, back when this project was
+still "salmi") lamented eight sources with no public feed. Re-checked
+2026-07-27, in the course of scouting Tier 3's own statement sources:
+
+- **Already solved, just not connected to that lament**: Fingrid
+  (`server/pollers/fingrid.js`), Traficom/NCSC-FI
+  (`server/pollers/ncscfi.js`), and NordPool indirectly (Finnish spot prices
+  already come from the free `porssisahko.net` proxy, not NordPool's own
+  paid API).
+- **Genuinely improved since the post**: SUPO now has a real RSS feed (see
+  METHODOLOGY.md's dependency-timeline section — folded into Tier 3
+  directly); Helen publishes a real downloadable hourly district-heating CSV
+  plus an `open.helen.fi` partner platform worth a closer look; Helsinki
+  Region Infoshare (`hri.fi`) now runs real APIs (Service Map, Linked
+  Events, HSY's own WFS).
+- **Still unsolved**: EFIS (Estonia) — one PDF annual report/year, too
+  infrequent to be an "immediate" signal regardless. F-Secure/WithSecure —
+  inconclusive; needs a direct check of their own blog page rather than
+  trusting aggregator search results.
+- **Bonus finds from the same pass**: state-media RSS (Xinhua, confirmed
+  working — `xinhuanet.com/english/rss/worldrss.xml`; TASS, likely has one,
+  unconfirmed) is the same easy shape as Tier 3's statement sources and
+  could be folded in the same way later. Telegram military-blogger/
+  grassroots monitoring (the post's "Digging Deeper" idea) is a
+  categorically harder problem — technically accessible via Telegram's
+  MTProto user API, but the real barrier was always verification of
+  adversarial, sometimes deliberately-seeded content, not access. Needs a
+  dedicated curation-pipeline design, not a poller.
+
+### Prediction markets, once the ethics are pinned down
+
+Prompted by a 2026-07-24 podcast segment on an AI-superforecasting startup
+whose API is still in closed beta (not usable today regardless). The
+project already has a dormant Polymarket poller
+(`server/pollers/polymarket.js`) from the Hormuz era. If ever revisited:
+**only integrate a market whose resolution is an operational/administrative
+fact, never one whose resolution requires violence or death** — the same
+category the original Hormuz "traffic returns to normal" market already
+was. Regulated venues (Kalshi) are barred by their regulator from listing
+the tragedy-outcome kind; that filtering breaks down exactly on unregulated
+venues (Polymarket), which is where the discomfort actually comes from. If
+ever built, no standalone "X% chance of war" headline anywhere — it would be
+one more line on the dependency timeline, robust-z'd against its own
+baseline like everything else, not a bare probability claim.
 
 ## Open loose ends from 2026-07-26
 

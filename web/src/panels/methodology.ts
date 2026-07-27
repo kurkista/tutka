@@ -12,9 +12,9 @@ function loadMethodologyMd(): Promise<string> {
   return methodologyMd;
 }
 
-function domainSection(md: string, n: number): string | null {
+function sectionByHeading(md: string, heading: string): string | null {
   const sections = md.split(/^## /m);
-  return sections.find((s) => s.startsWith(`Domain ${n} —`)) ?? null;
+  return sections.find((s) => s.startsWith(heading)) ?? null;
 }
 
 function rejectedSubsections(section: string): string | null {
@@ -22,14 +22,17 @@ function rejectedSubsections(section: string): string | null {
   return subs.length ? subs.map((s) => '### ' + s).join('\n') : null;
 }
 
-/** Un-hides and fills #{key}-rejected if this domain has an "evaluated and
- * rejected" subsection in METHODOLOGY.md; leaves it hidden otherwise — never
- * a "nothing here" filler for domains with no such section. */
-export async function renderRejectedSources(key: string, domainNum: number): Promise<void> {
+/** Un-hides and fills #{key}-rejected if the matching METHODOLOGY.md section
+ * has an "evaluated and rejected" subsection; leaves it hidden otherwise —
+ * never a "nothing here" filler for sections with no such subsection.
+ * `heading` is either a domain number (matches `## Domain N —`) or the exact
+ * leading text of a non-numbered `##` heading, e.g. `'Dependency timeline —'`. */
+export async function renderRejectedSources(key: string, heading: number | string): Promise<void> {
   const details = document.getElementById(`${key}-rejected`) as HTMLDetailsElement | null;
   if (!details) return;
   const md = await loadMethodologyMd().catch(() => '');
-  const section = md && domainSection(md, domainNum);
+  const headingText = typeof heading === 'number' ? `Domain ${heading} —` : heading;
+  const section = md && sectionByHeading(md, headingText);
   const rejected = section && rejectedSubsections(section);
   if (!rejected) return;
   document.getElementById(`${key}-rejected-body`)!.innerHTML = await marked.parse(rejected);

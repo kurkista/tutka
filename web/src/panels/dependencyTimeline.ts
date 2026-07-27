@@ -9,6 +9,7 @@ import { t, getLang, fmtNum } from '../i18n';
 import { getSeries, getEvents } from '../api';
 import { makeUnifiedTimeline, SERIES, type UnifiedTimelineRow } from '../charts';
 import { onFirstView, trackChart } from '../lazyView';
+import { renderRejectedSources } from './methodology';
 
 const METRICS: { metric: string; labelKey: string; color: string; fmt: (v: number) => string }[] = [
   { metric: 'nordic_index', labelKey: 'domain.1.tab', color: SERIES[0], fmt: (v) => fmtNum(v, 0) },
@@ -29,6 +30,7 @@ function ensureDashboardLink(): void {
 
 export function init(): void {
   ensureDashboardLink();
+  void renderRejectedSources('dep', 'Dependency timeline —');
 
   for (const btn of document.querySelectorAll<HTMLButtonElement>('#dep-range-toggle .range-btn')) {
     btn.addEventListener('click', () => {
