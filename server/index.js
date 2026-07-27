@@ -5,7 +5,7 @@ try { process.loadEnvFile(); } catch { /* no .env — fine in production */ }
 import {
   DB_PATH, VESSELS, INFOENV, NORDIC, INFRA, SOCIAL, HYBRID, CLIMATE, GDELT,
   ELECTRICITY, STATFIN, STOCKS, FX, OPENSKY, NCSCFI, EUVD, CERTEU, FINGRID,
-  RAJAVARTIOLAITOS, FIRMS, METEOALARM,
+  RAJAVARTIOLAITOS, FIRMS, METEOALARM, BRENT, STATEMENTS,
 } from './config.js';
 import {
   openDb, putTransit, prune, transitsSince, upsertVesselsDaily, putSeries,
@@ -37,6 +37,8 @@ import { pollFingridState } from './pollers/fingrid.js';
 import { pollRajavartiolaitos } from './pollers/rajavartiolaitos.js';
 import { pollFirms } from './pollers/firms.js';
 import { pollMeteoalarm } from './pollers/meteoalarm.js';
+import { pollBrentHistory, pollBrentQuote } from './pollers/brent.js';
+import { pollStatement } from './pollers/statements.js';
 
 openDb(DB_PATH);
 
@@ -102,10 +104,19 @@ function countTransitsBetween(startTs, endTs, dir) {
 }
 
 // --- pollers -------------------------------------------------------------------
-// Hormuz's market pollers (Brent, Polymarket, PortWatch) and its HPI recompute
-// are retired — no Baltic equivalent exists for any of them. The files
-// (hpi.js, pollers/brent.js, pollers/polymarket.js, pollers/portwatch.js)
-// stay in the repo, just unscheduled, per "not delete, stop investing".
+// Hormuz's HPI recompute and two of its three market pollers (Polymarket,
+// PortWatch) are retired — no Baltic equivalent exists for either. The files
+// (hpi.js, pollers/polymarket.js, pollers/portwatch.js) stay in the repo,
+// just unscheduled, per "not delete, stop investing". Brent is the
+// exception: reactivated below for ROADMAP.md Tier 3's dependency timeline,
+// where oil price is shown alongside the domain indices — not as an HPI
+// input this time, just context.
+
+register('brent_history', pollBrentHistory, BRENT.historyPollMs);
+register('brent_quote', pollBrentQuote, BRENT.quotePollMs);
+for (const [key, src] of Object.entries(STATEMENTS.sources)) {
+  register(`statement_${key}`, () => pollStatement(key, src), STATEMENTS.pollMs);
+}
 
 register('gdelt_nordic', () => pollGdelt(GDELT.modules.nordic), GDELT.modules.nordic.pollMs);
 register('gdelt_infoenv', () => pollGdelt(GDELT.modules.infoenv), GDELT.modules.infoenv.pollMs);

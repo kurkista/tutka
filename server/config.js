@@ -489,6 +489,58 @@ export const RAJAVARTIOLAITOS = {
 };
 
 // ---------------------------------------------------------------------------
+// Official statements — the "dependency timeline" (ROADMAP.md Tier 3).
+// Not domain-scoped like the advisory feeds above: one generic poller
+// (pollers/statements.js) walks this `sources` map and logs each new item
+// as a public event, cross-referenced against oil price + the domain
+// indices on the new timeline view. Raw social-media posts from
+// market-moving figures (the original Tier 3 idea) have no legal/free/
+// stable source — Truth Social's only real API is paid-institutional
+// ($60-100k/mo), X/Twitter dropped its free tier in Feb 2026, factba.se is
+// paywalled with no API. Redirected, per owner instruction, to official
+// statements from high-reach institutions instead. All 13 sources below
+// were fetched live (not just found via search) during scouting
+// (2026-07-27) and are free/keyless/no approval process. `urlMatch`, when
+// present, filters a source's broader press stream down to the specific
+// content wanted (e.g. UN's general feed mixes in GA/Security Council
+// items alongside Secretary-General statements).
+//
+// Deliberately excluded, see METHODOLOGY.md's Dependency timeline section
+// for the full reasoning: IMF and Amnesty (both have a working feed but a
+// ToS/technical blocker — logged for later, not gone); NATO (RSS
+// discontinued sitewide), IEA/OPEC (no usable feed), World Bank, US
+// Treasury, WWF (not viable at all).
+// ---------------------------------------------------------------------------
+export const STATEMENTS = {
+  userAgent: 'tutka-monitor/0.1 (+https://github.com/kurkista/tutka)',
+  pollMs: 15 * 60_000,
+  sources: {
+    whitehouse: { name: 'The White House', feedUrl: 'https://www.whitehouse.gov/news/feed' },
+    fed: { name: 'Federal Reserve', feedUrl: 'https://www.federalreserve.gov/feeds/press_monetary.xml' },
+    boe: { name: 'Bank of England', feedUrl: 'https://www.bankofengland.co.uk/rss/news' },
+    // ECB's feed URL ends .html but serves RSS 2.0 XML — a quirk of their CMS, not a mistake here.
+    ecb: { name: 'European Central Bank', feedUrl: 'https://www.ecb.europa.eu/rss/press.html' },
+    un: {
+      name: 'UN Secretary-General', feedUrl: 'https://press.un.org/en/rss.xml',
+      // press.un.org's feed mixes GA/Security Council/daily-briefing items;
+      // sgsm/sgt/sga URL-slug prefixes are the Secretary-General's own statements.
+      urlMatch: /\/(sgsm|sgt|sga)\d/i,
+    },
+    // Digest, not per-release: one bundled "Daily News" item/day, not one per press release.
+    ec: { name: 'European Commission', feedUrl: 'https://ec.europa.eu/commission/presscorner/api/rss' },
+    // The human-facing directory page 403s non-browser clients — this .ashx URL is the real feed.
+    coeu: { name: 'Council of the EU', feedUrl: 'https://www.consilium.europa.eu/en/rss/pressreleases.ashx' },
+    nasa: { name: 'NASA', feedUrl: 'https://www.nasa.gov/news-release/feed/' },
+    iaea: { name: 'IAEA', feedUrl: 'https://www.iaea.org/feeds/dgstatements' },
+    who: { name: 'World Health Organization', feedUrl: 'https://www.who.int/rss-feeds/news-english.xml' },
+    greenpeace: { name: 'Greenpeace International', feedUrl: 'https://www.greenpeace.org/international/press-release/feed/' },
+    icrc: { name: 'ICRC', feedUrl: 'https://www.icrc.org/en/rss/news' },
+    // Found via a follow-up scout on the owner's own 2025 blog post lamenting no public SUPO feed — one now exists.
+    supo: { name: 'SUPO', feedUrl: 'https://supo.fi/en/news-and-press-releases/-/asset_publisher/LVkvGHGkmM3J/rss' },
+  },
+};
+
+// ---------------------------------------------------------------------------
 // NCSC-FI (Kyberturvallisuuskeskus) public warnings RSS — domain 4's second,
 // independent (non-GDELT) source. Confirmed live 2026-07-24:
 // https://www.kyberturvallisuuskeskus.fi/feed/rss/fi/401 returns HTTP 200,
