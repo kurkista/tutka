@@ -95,11 +95,12 @@ The prerequisites this pass identified (index v1's deviation scoring, then the
 v2 news-volume ingestion fix) are **done and live** — see METHODOLOGY.md's
 changelogs. Everything below assumes a signal that can actually move.
 
-## Tier 1 — the site has no memory
+## Tier 1 — the site has no memory. Built 2026-07-27.
 
 This is the retention problem underneath "it feels lame". A monitoring site
-you visit, see NORMAL, and close has no reason to be revisited. There is
-currently no "what happened", no archive, no way to be told something moved.
+you visit, see NORMAL, and close has no reason to be revisited. There was no
+"what happened", no archive, no way to be told something moved — and the
+"Finland impact" drawer stopped at a single fuel-cost figure.
 
 - **Event log. Built 2026-07-26.** Persists band flips, gated deviation
   spikes (|z| ≥ 2), and advisory-feed items into one timestamped, permalinked
@@ -112,13 +113,17 @@ currently no "what happened", no archive, no way to be told something moved.
   one is `INCIDENT_LOG.md` and already exists — the earlier instruction "then
   log (+log incidences)" meant the latter, and the two were conflated for a
   while, kept distinct here.
-- **Finland impact, made concrete.** Extend the Kerttu household translation
-  beyond the current single figure: **unemployment rate** and **ostoskorin
-  hinta** (grocery-basket price) as tracked series alongside it. Both are
-  StatFin/PxWeb-shaped, the same source domain 5's Consumer Confidence
-  Indicator already comes from, so the ingestion pattern exists. This is the
-  most differentiated thing on the site and currently sits behind a floating
-  button that overlaps the content.
+- **Finland impact, made concrete. Built 2026-07-27.** Extended the national
+  tiles in the Kerttu drawer with **unemployment rate** (StatFin `tyti/135z`,
+  the plain published monthly rate) and **food/grocery prices** (StatFin
+  `khi/15b5`, coicop "01" — food & non-alcoholic beverages CPI sub-index,
+  shown as % change vs the same pre-crisis reference month the fuel figures
+  use). "Ostoskorin hinta" was the working name, but there's no official
+  "grocery basket" series — the food CPI sub-index is the honest real-data
+  stand-in, not an invented basket cost. `server/pollers/pxweb.js`
+  (`pollUnemployment`, `pollGroceryPrice`), `server/hilkka.js`
+  (`national.unemploymentRate`, `national.groceryPct`),
+  `web/src/panels/hilkka.ts` (two new tiles). Both series in `PUBLIC_METRICS`.
 
 ## Tier 2 — surface what's already good
 

@@ -705,9 +705,16 @@ export const STATFIN = {
   // 122p = annual change of the Consumer Price Index, monthly.
   // kbar/11cc = Consumer Confidence balance figures, monthly, 1995M10→ —
   // domain 5's C component (see SOCIAL above and pollers/confidence.js).
+  // tyti/135z = Labour Force Survey key indicators, monthly — unemployment
+  // rate for the Tier 1 "Finland impact" expansion.
+  // khi/15b5 = Consumer Price Index (2025=100) by commodity, monthly —
+  // coicop "01" (food and non-alcoholic beverages) is the honest proxy for
+  // "ostoskorin hinta": a real official sub-index, not a fabricated basket.
   fuelUrl: 'https://statfin.stat.fi/PxWeb/api/v1/en/StatFin/khi/11xx.px',
   cpiUrl: 'https://statfin.stat.fi/PxWeb/api/v1/en/StatFin/khi/122p.px',
   confidenceUrl: 'https://statfin.stat.fi/PxWeb/api/v1/en/StatFin/kbar/11cc.px',
+  unemploymentUrl: 'https://statfin.stat.fi/PxWeb/api/v1/en/StatFin/tyti/135z.px',
+  groceryUrl: 'https://statfin.stat.fi/PxWeb/api/v1/en/StatFin/khi/15b5.px',
   fuelCodes: { pump_e95: '0700200', pump_diesel: '0700100', pump_heatoil: '0400500' },
   pollMs: 24 * 3600_000, // data changes monthly; a daily check is plenty
 };
@@ -848,4 +855,6 @@ export const PUBLIC_METRICS = [
   'stock_finnair',
   'eurusd',
   'fi_cpi_yoy',
+  'fi_unemployment_rate',
+  'fi_grocery_cpi',
 ];

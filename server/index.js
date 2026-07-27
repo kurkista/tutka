@@ -25,7 +25,7 @@ import { gatherAndComputeClimate } from './indices/climate.js';
 import { pollGdelt } from './pollers/gdelt.js';
 import { pollElectricity } from './pollers/electricity.js';
 import { pollPump } from './pollers/pump.js';
-import { pollCpi } from './pollers/pxweb.js';
+import { pollCpi, pollUnemployment, pollGroceryPrice } from './pollers/pxweb.js';
 import { pollConsumerConfidence } from './pollers/confidence.js';
 import { pollStocks } from './pollers/stocks.js';
 import { pollFx } from './pollers/fx.js';
@@ -117,6 +117,8 @@ register('electricity', pollElectricity, ELECTRICITY.pollMs);
 register('pump', pollPump, STATFIN.pollMs);
 register('cpi', pollCpi, STATFIN.pollMs);
 register('confidence', pollConsumerConfidence, STATFIN.pollMs);
+register('unemployment', pollUnemployment, STATFIN.pollMs);
+register('grocery', pollGroceryPrice, STATFIN.pollMs);
 register('stocks', pollStocks, STOCKS.pollMs);
 register('fx', pollFx, FX.pollMs);
 if (OPENSKY.clientId && OPENSKY.clientSecret) {

@@ -55,6 +55,16 @@ export function computeHilkka(now = Date.now()) {
     return first > 0 ? ((last - first) / first) * 100 : null;
   };
 
+  // grocery/food CPI (coicop "01"): same "vs pre-crisis month" framing as the
+  // fuel deltas above, since it's a point-figure index (2025=100), not a
+  // euro amount — a % change is the honest thing to show, not an invented
+  // basket price.
+  const groceryNow = latestSeries('fi_grocery_cpi');
+  const groceryPre = atMonth('fi_grocery_cpi', HILKKA.preCrisisMonth);
+  const groceryPct = groceryNow && groceryPre
+    ? ((groceryNow.value - groceryPre) / groceryPre) * 100
+    : null;
+
   return {
     persona: HILKKA,
     fuel: {
@@ -88,6 +98,8 @@ export function computeHilkka(now = Date.now()) {
       finnairPct30d: pct30d('stock_finnair'),
       eurusd: latestSeries('eurusd')?.value ?? null,
       cpiYoy: latestSeries('fi_cpi_yoy'),
+      unemploymentRate: latestSeries('fi_unemployment_rate'),
+      groceryPct,
     },
     ts: now,
   };

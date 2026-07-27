@@ -17,10 +17,14 @@ interface HilkkaData {
   national: {
     nestePct30d: number | null; finnairPct30d: number | null;
     eurusd: number | null; cpiYoy: { ts: number; value: number } | null;
+    unemploymentRate: { ts: number; value: number } | null; groceryPct: number | null;
   };
 }
 
-const REFRESH_METRICS = new Set(['pump_e95', 'elec_spot', 'stock_neste', 'stock_finnair', 'eurusd', 'fi_cpi_yoy']);
+const REFRESH_METRICS = new Set([
+  'pump_e95', 'elec_spot', 'stock_neste', 'stock_finnair', 'eurusd', 'fi_cpi_yoy',
+  'fi_unemployment_rate', 'fi_grocery_cpi',
+]);
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
 export async function init(): Promise<void> {
@@ -141,6 +145,14 @@ function renderTiles(d: HilkkaData): void {
     [
       d.national.cpiYoy ? `${fmtNum(d.national.cpiYoy.value, 1)} %` : '–',
       t('suomi.cpi', { month: d.national.cpiYoy ? fmtDate(d.national.cpiYoy.ts) : '…' }),
+    ],
+    [
+      d.national.unemploymentRate ? `${fmtNum(d.national.unemploymentRate.value, 1)} %` : '–',
+      t('suomi.unemployment', { month: d.national.unemploymentRate ? fmtDate(d.national.unemploymentRate.ts) : '…' }),
+    ],
+    [
+      pct(d.national.groceryPct),
+      t('suomi.grocery', { month: fmtDate(Date.parse(`${d.persona.preCrisisMonth}-01`)) }),
     ],
   ];
   el.innerHTML = tiles

@@ -82,6 +82,8 @@
   "suomi.finnair": "Finnair, 30 days",
   "suomi.eurusd": "USD per EUR (ECB)",
   "suomi.cpi": "Inflation y/y ({month})",
+  "suomi.unemployment": "Unemployment rate ({month})",
+  "suomi.grocery": "Food prices vs {month}",
   "hilkka.heatoil": "Heating oil is {price} €/L — filling a {liters} L tank costs {delta} vs pre-crisis February",
   "hilkka.more": "Full breakdown →",
   "layers.title": "Live layers",
