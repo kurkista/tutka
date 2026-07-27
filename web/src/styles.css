@@ -27,6 +27,8 @@
   --series-3: #4fa6a6;
   --series-4: #9085e9;
   --series-5: #b0736f;
+  --series-6: #7fb069;
+  --series-7: #d4a5d8;
 
   --series-blue: var(--series-1);
   --tanker: var(--series-2);
@@ -203,6 +205,11 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
 #timeline-view { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 18px; }
 #timeline-view .fineprint { margin: 0 0 12px; max-width: 900px; }
 #timeline-chart { width: 100%; height: 520px; }
+
+#dependencies-panel { max-width: 1100px; margin: 0 auto; }
+#dependencies-panel .fineprint { max-width: 900px; }
+#dependencies-chart { width: 100%; height: 480px; }
+.dep-disclaimer { margin-top: 10px; font-style: italic; }
 #map-view { flex: 1; min-height: 0; position: relative; }
 #map-view #map { position: absolute; inset: 0; }
 
@@ -388,6 +395,7 @@ dialog p { font-size: 14px; line-height: 1.5; }
   #left { order: 1; border-right: none; }
   #right { order: 2; border-left: none; }
   #timeline-chart { height: 360px; }
+  #dependencies-chart { height: 360px; }
   .brand-sub { display: none; }
 }
 

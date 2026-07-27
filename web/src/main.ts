@@ -14,6 +14,7 @@ import * as welcome from './panels/welcome';
 import * as timeline from './panels/timeline';
 import * as dashboard from './panels/dashboard';
 import * as eventLog from './panels/eventLog';
+import * as dependencyTimeline from './panels/dependencyTimeline';
 import { initMethodology } from './panels/methodology';
 import { createDomainPanel } from './panels/domainPanel';
 import { initDomainNav, setActiveDomain } from './panels/domainNav';
@@ -61,6 +62,7 @@ async function boot() {
   await markets.init(state);
   await hilkka.init();
   await timeline.init(state);
+  dependencyTimeline.init();
   infoenv.init(state.modules.infoenv);
   hybrid.init(state.modules.hybrid);
   infra.init(state.modules.infra);
@@ -143,19 +145,31 @@ async function renderRoute(): Promise<void> {
   const match = location.hash.match(/^#domain\/(\d+)$/);
   const eventPermalinkMatch = location.hash.match(/^#event\/(\d+)$/);
   const isEventsRoute = location.hash === '#events';
+  const isDependenciesRoute = location.hash === '#dependencies';
   const dashboardView = document.getElementById('dashboard-view')!;
   const domainView = document.getElementById('domain-view')!;
   const eventsView = document.getElementById('events-view')!;
+  const dependenciesView = document.getElementById('dependencies-view')!;
 
   if (eventPermalinkMatch || isEventsRoute) {
     dashboardView.hidden = true;
     domainView.hidden = true;
+    dependenciesView.hidden = true;
     eventsView.hidden = false;
     if (eventPermalinkMatch) await eventLog.initPermalink(Number(eventPermalinkMatch[1]));
     else await eventLog.init();
     return;
   }
   eventsView.hidden = true;
+
+  if (isDependenciesRoute) {
+    dashboardView.hidden = true;
+    domainView.hidden = true;
+    dependenciesView.hidden = false;
+    await activate('dependencies');
+    return;
+  }
+  dependenciesView.hidden = true;
 
   if (!match) {
     dashboardView.hidden = false;

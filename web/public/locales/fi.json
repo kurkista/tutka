@@ -164,5 +164,9 @@
   "events.notFound": "Tätä tapahtumaa ei löydy — se on voitu poistaa, tai linkki on virheellinen.",
   "events.backToLog": "← Koko tapahtumaloki",
   "event.bandChange": "{module} siirtyi: {from} → {to}",
-  "event.deviationSpike": "{module}: {component} on {dir} normaalin"
+  "event.deviationSpike": "{module}: {component} on {dir} normaalin",
+  "nav.dependencies": "Riippuvuusaikajana",
+  "dep.oil": "Brent-raakaöljy",
+  "dep.explainer": "Kuusi osa-aluetta ja Brent-raakaöljy samalla yhteisellä asteikolla, jotta näkee mikä liikkuu yhdessä. Katkoviivat merkitsevät hallitusten, keskuspankkien ja kansainvälisten järjestöjen virallisia lausuntoja — vie kursori viivan päälle nähdäksesi otsikon ja linkin.",
+  "dep.disclaimer": "Näytetään samalla asteikolla vertailun vuoksi — ei väitettä siitä, että toinen aiheutti toisen."
 }

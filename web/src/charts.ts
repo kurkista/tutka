@@ -46,6 +46,8 @@ export const SERIES = [
   token('--series-3', '#4fa6a6'),
   token('--series-4', '#9085e9'),
   token('--series-5', '#b0736f'),
+  token('--series-6', '#7fb069'),
+  token('--series-7', '#d4a5d8'),
 ];
 
 const tooltipChrome = {

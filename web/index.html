@@ -257,6 +257,20 @@
     </div>
   </main>
 
+  <main id="dependencies-view" hidden>
+    <div class="panel" id="dependencies-panel">
+      <p class="fineprint"><a href="#" id="dependencies-dashboard-link"></a></p>
+      <h2 data-i18n="nav.dependencies">Dependency timeline</h2>
+      <p class="fineprint" data-i18n="dep.explainer">The six domain indices and Brent crude, on the same shared scale, so what moves together is visible. Official statements from governments, central banks, and international organizations (ROADMAP.md Tier 3) mark the dashed lines — hover one for its title and link.</p>
+      <div id="dep-range-toggle" class="range-toggle">
+        <button class="range-btn" data-days="7" data-i18n="timeline.range7d">7D</button>
+        <button class="range-btn active" data-days="30" data-i18n="timeline.range30d">30D</button>
+      </div>
+      <div id="dependencies-chart"></div>
+      <p class="fineprint dep-disclaimer" data-i18n="dep.disclaimer">Shown on the same axis for comparison — not a claim that one caused another.</p>
+    </div>
+  </main>
+
   <div id="bottom-tabs">
     <button id="hilkka-tab" class="bottom-tab" aria-expanded="false">🇫🇮 <span data-i18n="hilkka.tab">Finland impact</span></button>
   </div>

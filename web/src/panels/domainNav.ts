@@ -28,6 +28,12 @@ export function initDomainNav(): void {
   events.addEventListener('click', () => { location.hash = '#events'; });
   nav.appendChild(events);
 
+  const dependencies = document.createElement('button');
+  dependencies.className = 'domain-nav-btn is-dependencies';
+  dependencies.textContent = t('nav.dependencies');
+  dependencies.addEventListener('click', () => { location.hash = '#dependencies'; });
+  nav.appendChild(dependencies);
+
   for (const n of DOMAIN_NUMBERS) {
     const btn = document.createElement('button');
     btn.className = 'domain-nav-btn';
