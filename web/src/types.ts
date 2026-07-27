@@ -86,8 +86,11 @@ export interface DomainEvent {
 export interface PublicEvent {
   id: number;
   ts: number;
-  type: 'band_change' | 'deviation_spike' | 'advisory';
-  module: 'nordic' | 'hybrid' | 'infoenv' | 'infra' | 'social' | 'climate';
+  type: 'band_change' | 'deviation_spike' | 'advisory' | 'official_statement';
+  /** A domain key for domain-scoped events, or a STATEMENTS.sources key
+   * (e.g. 'fed', 'nasa') for official-statement events, which aren't
+   * domain-scoped. */
+  module: 'nordic' | 'hybrid' | 'infoenv' | 'infra' | 'social' | 'climate' | string;
   detail: Record<string, unknown>;
 }
 

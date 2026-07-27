@@ -17,13 +17,14 @@ interface DeviationSpikeDetail { component: string; z: number; value: number; di
 interface AdvisoryDetail { title: string; url: string; source: string }
 
 function eventText(e: PublicEvent): string {
-  const module = t(`domain.${MODULE_DOMAIN[e.module]}.tab`);
   if (e.type === 'band_change') {
     const d = e.detail as unknown as BandChangeDetail;
+    const module = t(`domain.${MODULE_DOMAIN[e.module]}.tab`);
     return t('event.bandChange', { module, from: t(`band.${d.from}`), to: t(`band.${d.to}`) });
   }
   if (e.type === 'deviation_spike') {
     const d = e.detail as unknown as DeviationSpikeDetail;
+    const module = t(`domain.${MODULE_DOMAIN[e.module]}.tab`);
     return t('event.deviationSpike', {
       module,
       component: t(`comp.${d.component}`),
@@ -31,6 +32,15 @@ function eventText(e: PublicEvent): string {
     });
   }
   return (e.detail as unknown as AdvisoryDetail).title;
+}
+
+/** Domain-scoped events show the domain tab name; official-statement events
+ * (module is a source key like 'fed', not a domain) fall back to the
+ * source name recorded in `detail`. */
+function eventSourceLabel(e: PublicEvent): string {
+  const domainNum = MODULE_DOMAIN[e.module];
+  if (domainNum) return t(`domain.${domainNum}.tab`);
+  return (e.detail as unknown as AdvisoryDetail).source ?? e.module;
 }
 
 function eventChip(e: PublicEvent): HTMLLIElement {
@@ -45,7 +55,7 @@ function eventChip(e: PublicEvent): HTMLLIElement {
 
   const src = document.createElement('span');
   src.className = 'src';
-  src.textContent = `${t(`domain.${MODULE_DOMAIN[e.module]}.tab`)} · ${fmtDate(e.ts)} ${fmtTime(e.ts)}`;
+  src.textContent = `${eventSourceLabel(e)} · ${fmtDate(e.ts)} ${fmtTime(e.ts)}`;
 
   li.append(a, src);
   return li;
