@@ -716,6 +716,25 @@ export const GDELT = {
       calmStart: '20250101000000',
       calmEnd: '20251231235959',
     },
+    // Standalone tracker, not a domain-index component: how often Russia-based
+    // media mentions Finland at all — not filtered to conflict/military
+    // language the way nordic/hybrid above are, since the question here is
+    // rhetorical attention itself, not any particular narrative. `sourcecountry`
+    // is GDELT's own classification of the outlet's country (lowercase full
+    // name, not an ISO code — TASS/RIA Novosti/Sputnik/RT all classify as
+    // "russia"), independent of the article's language. Shown, not scored
+    // (decided 2026-07-28) — reuses storeGdeltVolume's existing
+    // vol_daily/vol_today/median30d machinery as-is; the frontend derives
+    // 24h/7d/30d-vs-season comparisons from the accumulated vol_daily series
+    // once enough history exists.
+    ruFinland: {
+      module: 'ru_finland',
+      query: 'sourcecountry:russia (Finland OR Finnish OR Suomi)',
+      seriesPrefix: 'gdelt_rufi_',
+      pollMs: 30 * 60_000,
+      calmStart: '20250101000000',
+      calmEnd: '20251231235959',
+    },
   },
 };
 
@@ -909,4 +928,9 @@ export const PUBLIC_METRICS = [
   'fi_cpi_yoy',
   'fi_unemployment_rate',
   'fi_grocery_cpi',
+  // Standalone tracker: Russia-based media mentions of Finland, shown not scored.
+  'gdelt_rufi_vol_daily',
+  'gdelt_rufi_vol_today',
+  'gdelt_rufi_median30d',
+  'gdelt_rufi_tone',
 ];

@@ -124,6 +124,7 @@ register('gdelt_infra', () => pollGdelt(GDELT.modules.infra), GDELT.modules.infr
 register('gdelt_social', () => pollGdelt(GDELT.modules.social), GDELT.modules.social.pollMs);
 register('gdelt_hybrid', () => pollGdelt(GDELT.modules.hybrid), GDELT.modules.hybrid.pollMs);
 register('gdelt_climate', () => pollGdelt(GDELT.modules.climate), GDELT.modules.climate.pollMs);
+register('gdelt_ru_finland', () => pollGdelt(GDELT.modules.ruFinland), GDELT.modules.ruFinland.pollMs);
 register('electricity', pollElectricity, ELECTRICITY.pollMs);
 register('pump', pollPump, STATFIN.pollMs);
 register('cpi', pollCpi, STATFIN.pollMs);
