@@ -40,6 +40,7 @@
         <aside id="left" class="panel">
           <section>
             <h2 data-i18n="status.title">Tension</h2>
+            <p class="panel-reading" id="hpi-band"></p>
             <div id="hpi-gauge" class="gauge"></div>
             <ul id="hpi-components" class="components"></ul>
             <p class="fineprint">
@@ -97,9 +98,9 @@
       <div class="split-layout">
         <section class="panel">
           <h2 data-i18n="domain.3.name">Information environment</h2>
+          <p class="panel-reading" id="infoenv-band"></p>
           <div id="infoenv-gauge" class="gauge"></div>
           <ul id="infoenv-components" class="components"></ul>
-          <p class="fineprint" id="infoenv-band"></p>
           <details id="infoenv-rejected" class="rejected-sources" hidden>
             <summary data-i18n="methodology.rejectedSummary">Sources checked and rejected for this domain</summary>
             <div id="infoenv-rejected-body"></div>
@@ -119,9 +120,9 @@
         <section class="panel">
           <h2 data-i18n="domain.2.name">Hybrid &amp; grey-zone threats</h2>
           <p class="fineprint" data-i18n="domain.2.concept">"Hybrid" and "grey-zone" refer to state-linked activity that deliberately stays below the threshold of open conflict — deniable and hard to trace by design.</p>
+          <p class="panel-reading" id="hybrid-band"></p>
           <div id="hybrid-gauge" class="gauge"></div>
           <ul id="hybrid-components" class="components"></ul>
-          <p class="fineprint" id="hybrid-band"></p>
           <details id="hybrid-rejected" class="rejected-sources" hidden>
             <summary data-i18n="methodology.rejectedSummary">Sources checked and rejected for this domain</summary>
             <div id="hybrid-rejected-body"></div>
@@ -147,9 +148,9 @@
         <section class="panel">
           <section>
             <h2 data-i18n="domain.4.name">Civic &amp; critical infrastructure</h2>
+            <p class="panel-reading" id="infra-band"></p>
             <div id="infra-gauge" class="gauge"></div>
             <ul id="infra-components" class="components"></ul>
-            <p class="fineprint" id="infra-band"></p>
             <details id="infra-rejected" class="rejected-sources" hidden>
               <summary data-i18n="methodology.rejectedSummary">Sources checked and rejected for this domain</summary>
               <div id="infra-rejected-body"></div>
@@ -181,9 +182,9 @@
         <section class="panel">
           <section>
             <h2 data-i18n="domain.5.name">Social stability</h2>
+            <p class="panel-reading" id="social-band"></p>
             <div id="social-gauge" class="gauge"></div>
             <ul id="social-components" class="components"></ul>
-            <p class="fineprint" id="social-band"></p>
             <details id="social-rejected" class="rejected-sources" hidden>
               <summary data-i18n="methodology.rejectedSummary">Sources checked and rejected for this domain</summary>
               <div id="social-rejected-body"></div>
@@ -208,9 +209,9 @@
         <section class="panel">
           <section>
             <h2 data-i18n="domain.6.name">Environmental &amp; climate security</h2>
+            <p class="panel-reading" id="climate-band"></p>
             <div id="climate-gauge" class="gauge"></div>
             <ul id="climate-components" class="components"></ul>
-            <p class="fineprint" id="climate-band"></p>
             <details id="climate-rejected" class="rejected-sources" hidden>
               <summary data-i18n="methodology.rejectedSummary">Sources checked and rejected for this domain</summary>
               <div id="climate-rejected-body"></div>
@@ -261,13 +262,18 @@
     <div class="panel" id="dependencies-panel">
       <p class="fineprint"><a href="#" id="dependencies-dashboard-link"></a></p>
       <h2 data-i18n="nav.dependencies">Dependency timeline</h2>
-      <p class="fineprint" data-i18n="dep.explainer">The six domain indices and Brent crude, on the same shared scale, so what moves together is visible. Official statements from governments, central banks, and international organizations (ROADMAP.md Tier 3) mark the dashed lines — hover one for its title and link.</p>
-      <div id="dep-range-toggle" class="range-toggle">
-        <button class="range-btn" data-days="7" data-i18n="timeline.range7d">7D</button>
-        <button class="range-btn active" data-days="30" data-i18n="timeline.range30d">30D</button>
-      </div>
-      <div id="dependencies-chart"></div>
-      <p class="fineprint dep-disclaimer" data-i18n="dep.disclaimer">Shown on the same axis for comparison — not a claim that one caused another.</p>
+      <p class="panel-reading" id="dependencies-summary"></p>
+      <details id="dependencies-chart-details">
+        <summary data-i18n="dep.showChart">Show the full chart</summary>
+        <p class="fineprint" data-i18n="dep.explainer">The six domain indices and Brent crude, on the same shared scale, so what moves together is visible. Official statements from governments, central banks, and international organizations (ROADMAP.md Tier 3) mark the dashed lines — hover one for its title and link.</p>
+        <p class="fineprint" data-i18n="dep.versionNote">A domain-index line only covers the time since its scoring formula last changed — a short line means a recent update, not missing data. Brent's longer line is real history, not a gap on the other six.</p>
+        <div id="dep-range-toggle" class="range-toggle">
+          <button class="range-btn" data-days="7" data-i18n="timeline.range7d">7D</button>
+          <button class="range-btn active" data-days="30" data-i18n="timeline.range30d">30D</button>
+        </div>
+        <div id="dependencies-chart"></div>
+        <p class="fineprint dep-disclaimer" data-i18n="dep.disclaimer">Shown on the same axis for comparison — not a claim that one caused another.</p>
+      </details>
       <details id="dep-rejected" class="rejected-sources" hidden>
         <summary data-i18n="methodology.rejectedSummary">Sources checked and rejected for this domain</summary>
         <div id="dep-rejected-body"></div>

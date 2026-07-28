@@ -7,7 +7,7 @@ import type { AppState, IndexSnapshot } from '../types';
 import { t, fmtNum } from '../i18n';
 import { makeGauge, setGauge } from '../charts';
 import { onFirstView, trackChart } from '../lazyView';
-import { readingFor, componentWhy } from '../reading';
+import { readingFor, componentWhy, missingComponentLabel } from '../reading';
 import { renderRejectedSources } from './methodology';
 
 const COMPONENT_KEYS = ['V', 'T'] as const;
@@ -33,12 +33,22 @@ function renderIndex(snapshot: IndexSnapshot | null): void {
   latest = snapshot;
   const chip = document.getElementById('band-chip')!;
   const label = document.getElementById('band-label')!;
+  const reading = readingFor(snapshot);
   chip.className = 'band-chip ' + (snapshot ? `band-${snapshot.band}` : 'band-none');
   // The chip sits in global chrome on every route but only ever describes
   // domain 1, which nothing on screen used to say.
-  chip.title = `${t('domain.1.name')} — ${readingFor(snapshot).detail}`;
+  chip.title = `${t('domain.1.name')} — ${reading.detail}`;
   label.textContent = snapshot
     ? `${t('domain.1.short')} ${Math.round(snapshot.value)} · ${t('band.' + snapshot.band)}`
+    : t('status.warming');
+
+  // Domain 1's own deep-dive panel — same promoted plain-language reading as
+  // domains 2-6 get from domainPanel.ts, so "what is this domain telling me"
+  // comes before the gauge and raw component numbers, not buried after them.
+  const bandEl = document.getElementById('hpi-band')!;
+  bandEl.className = snapshot ? `panel-reading band-${snapshot.band}` : 'panel-reading';
+  bandEl.innerHTML = snapshot
+    ? `<span class="band-word">${t('band.' + snapshot.band)}</span> · ${Math.round(snapshot.value)} — ${reading.detail}`
     : t('status.warming');
 
   if (gauge) setGauge(gauge, snapshot?.value ?? null);
@@ -54,7 +64,8 @@ function renderIndex(snapshot: IndexSnapshot | null): void {
         `<span class="val">${fmtNum(c.score, 0)}</span></summary>` +
         `<div class="component-why">${why.map((l) => `<p>${l}</p>`).join('')}</div></details>`;
     } else {
-      li.innerHTML = `<span>${t('comp.' + key)}</span><span class="stale">${t('comp.stale')}</span>`;
+      const why = snapshot ? missingComponentLabel(snapshot, key) : t('card.noBaseline');
+      li.innerHTML = `<span>${t('comp.' + key)}</span><span class="stale">${why}</span>`;
     }
     list.appendChild(li);
   }

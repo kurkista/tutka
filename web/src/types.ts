@@ -54,6 +54,12 @@ export interface IndexSnapshot {
   value: number;
   band: string;
   components: Record<string, IndexComponent>;
+  // Why a component listed in a domain's componentKeys is absent from
+  // `components` above — 'no_data' (nothing in window), 'stale' (last
+  // reading too old), or 'baseline' (not enough history yet for a trailing
+  // baseline). Absent from this map too means the component was never even
+  // attempted (shouldn't happen for a domain's own componentKeys).
+  dropped?: Record<string, 'no_data' | 'stale' | 'baseline'>;
   version: string;
 }
 

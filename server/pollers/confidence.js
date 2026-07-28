@@ -13,7 +13,11 @@ export async function pollConsumerConfidence() {
     signal: AbortSignal.timeout(20_000),
     body: JSON.stringify({
       query: [
-        { code: 'timeperiod_m', selection: { filter: 'top', values: ['6'] } },
+        // '400' (~33 years): the DEVIATION_MONTHLY baseline needs >=12
+        // samples spanning >=365 days, which 6 months can never satisfy —
+        // StatFin's CCI_A1 series goes back to 1995M10, so this comfortably
+        // covers it. See INCIDENT_LOG.md for the incident this fixes.
+        { code: 'timeperiod_m', selection: { filter: 'top', values: ['400'] } },
         { code: 'contentscode', selection: { filter: 'item', values: ['CCI_A1'] } },
       ],
       response: { format: 'json-stat2' },

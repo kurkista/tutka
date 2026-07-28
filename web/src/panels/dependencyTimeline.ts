@@ -4,12 +4,22 @@
 // official-statement events (ROADMAP.md Tier 3) as dashed markers. Shown for
 // comparison, not causation — see the fixed disclaimer caption below the
 // chart; no lag/coefficient is computed or implied.
-import type { DomainEvent } from '../types';
+import type { AppState, DomainEvent, IndexSnapshot } from '../types';
 import { t, getLang, fmtNum } from '../i18n';
 import { getSeries, getEvents } from '../api';
 import { makeUnifiedTimeline, SERIES, type UnifiedTimelineRow } from '../charts';
-import { onFirstView, trackChart } from '../lazyView';
+import { trackChart } from '../lazyView';
+import { readingFor, readingLabel } from '../reading';
 import { renderRejectedSources } from './methodology';
+
+const SUMMARY_DOMAINS: { nameKey: string; moduleKey: 'nordic' | 'hybrid' | 'infoenv' | 'infra' | 'social' | 'climate' }[] = [
+  { nameKey: 'domain.1.name', moduleKey: 'nordic' },
+  { nameKey: 'domain.2.name', moduleKey: 'hybrid' },
+  { nameKey: 'domain.3.name', moduleKey: 'infoenv' },
+  { nameKey: 'domain.4.name', moduleKey: 'infra' },
+  { nameKey: 'domain.5.name', moduleKey: 'social' },
+  { nameKey: 'domain.6.name', moduleKey: 'climate' },
+];
 
 const METRICS: { metric: string; labelKey: string; color: string; fmt: (v: number) => string }[] = [
   { metric: 'nordic_index', labelKey: 'domain.1.tab', color: SERIES[0], fmt: (v) => fmtNum(v, 0) },
@@ -28,8 +38,9 @@ function ensureDashboardLink(): void {
   document.getElementById('dependencies-dashboard-link')!.textContent = `← ${t('nav.dashboard')}`;
 }
 
-export function init(): void {
+export function init(state: AppState): void {
   ensureDashboardLink();
+  renderSummary(state);
   void renderRejectedSources('dep', 'Dependency timeline —');
 
   for (const btn of document.querySelectorAll<HTMLButtonElement>('#dep-range-toggle .range-btn')) {
@@ -41,11 +52,42 @@ export function init(): void {
     });
   }
 
-  // Built on first visit, not at boot — same 0×0-container reasoning as
-  // domain 1's timeline.ts (see its own comment and INCIDENT_LOG.md
-  // 2026-07-26): this view starts `hidden`, and ECharts falls back to a
-  // 100px box if it measures before the route shows it.
-  onFirstView('dependencies', renderChart);
+  // The seven-series robust-z chart is demoted behind a closed-by-default
+  // <details> (the plain-language summary above already answers "what's
+  // going on"), so it's built the first time that <details> actually opens
+  // rather than at boot — same 0×0-container reasoning domain 1's
+  // timeline.ts documents (see its own comment and INCIDENT_LOG.md
+  // 2026-07-26), just triggered by the disclosure instead of route
+  // visibility: a closed <details> collapses its content the same way a
+  // `hidden` route container does, so ECharts would still measure 0×0 if
+  // built before the reader actually opens it.
+  const details = document.getElementById('dependencies-chart-details') as HTMLDetailsElement;
+  details.addEventListener('toggle', () => {
+    if (details.open && !chart) void renderChart();
+  }, { once: false });
+}
+
+function renderSummary(state: AppState): void {
+  const rows = SUMMARY_DOMAINS.map((d) => {
+    const index = state.modules[d.moduleKey].index as IndexSnapshot | null;
+    return { nameKey: d.nameKey, index, reading: readingFor(index) };
+  });
+  const reporting = rows.filter((r) => r.index);
+  const ranked = [...reporting].sort((a, b) => b.index!.value - a.index!.value);
+  const lead = ranked[0];
+
+  const parts: string[] = [];
+  if (lead && lead.index!.band !== 'NORMAL') {
+    parts.push(`${t(lead.nameKey)} — ${readingLabel(lead.reading)}. ${lead.reading.detail}.`);
+  } else {
+    parts.push(t('dashboard.calmBody', { n: reporting.length }));
+  }
+
+  const brent = state.metrics['brent_usd'];
+  if (brent) parts.push(t('dep.brentNow', { v: fmtNum(brent.value, 2) }));
+
+  document.getElementById('dependencies-summary')!.textContent =
+    parts.map((s) => (/[.!?]$/.test(s) ? s : `${s}.`)).join(' ');
 }
 
 async function renderChart(): Promise<void> {

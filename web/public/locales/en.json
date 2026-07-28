@@ -142,6 +142,7 @@
   "dir.above": "above",
   "dir.below": "below",
   "timeline.axis": "deviations from normal",
+  "timeline.moreEvents": "(+{n} more)",
   "domain.1.short": "Mil.",
   "tip.now": "Now: {v}",
   "tip.normal": "30-day normal: {v}",
@@ -168,5 +169,8 @@
   "nav.dependencies": "Dependency timeline",
   "dep.oil": "Brent crude",
   "dep.explainer": "The six domain indices and Brent crude, on the same shared scale, so what moves together is visible. Official statements from governments, central banks, and international organizations mark the dashed lines — hover one for its title and link.",
-  "dep.disclaimer": "Shown on the same axis for comparison — not a claim that one caused another."
+  "dep.versionNote": "A domain-index line only covers the time since its scoring formula last changed — a short line means a recent update, not missing data. Brent's longer line is real history, not a gap on the other six.",
+  "dep.disclaimer": "Shown on the same axis for comparison — not a claim that one caused another.",
+  "dep.showChart": "Show the full chart",
+  "dep.brentNow": "Brent crude is currently ${v}/bbl."
 }

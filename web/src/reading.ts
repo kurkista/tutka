@@ -94,6 +94,20 @@ export function componentWhy(c: IndexComponent): string[] {
   return [...lines, plain];
 }
 
+/**
+ * Label for a component missing from `snapshot.components` — distinguishes
+ * "still building a baseline" (young, or a permanently-misconfigured
+ * poller — see INCIDENT_LOG.md, 2026-07-28) from genuine staleness and from
+ * no data at all, instead of one generic "excluded" string for all three.
+ */
+export function missingComponentLabel(snapshot: IndexSnapshot, key: string): string {
+  switch (snapshot.dropped?.[key]) {
+    case 'baseline': return t('card.noBaseline');
+    case 'no_data': return t('status.noData');
+    default: return t('comp.stale');
+  }
+}
+
 /** `41 · NOTABLE`, or an em dash when there is nothing to report yet. */
 export function readingLabel(r: Reading): string {
   if (r.band === null || r.value === null) return '—';

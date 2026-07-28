@@ -37,14 +37,28 @@ const SPIKE_Z = 2;
  */
 
 /**
- * Score one component from its own history. Returns null — and so drops the
- * component, letting engine.js renormalize the surviving weights — whenever
- * the data can't honestly support a score.
+ * @typedef {'no_data' | 'stale' | 'baseline'} DropReason
+ * - 'no_data': nothing in the window at all (outage, or all points filtered
+ *   by zeroIsMissing) — the domain has nothing to say about this component.
+ * - 'stale': real data exists but the most recent point is older than the
+ *   component's staleness budget.
+ * - 'baseline': recent data exists, but there isn't yet enough history
+ *   (samples or elapsed span) to trust a trailing baseline — "still young",
+ *   not "broken". See server/pollers/confidence.js's 2026-07-28 incident:
+ *   this can also be permanent if a poller's query window structurally
+ *   can't reach minSamples/minSpanMs, which looks identical from here.
+ */
+
+/**
+ * Score one component from its own history. Returns a drop reason instead of
+ * the scored result — letting engine.js renormalize the surviving weights —
+ * whenever the data can't honestly support a score.
  *
  * @param {ComponentSpec} spec
  * @param {any} tuning  merged deviation tuning
  * @param {number} now
  * @param {number} stalenessMs
+ * @returns {{dropped: DropReason} | {score: number, raw: any, ts: number}}
  */
 export function scoreComponent(spec, tuning, now, stalenessMs) {
   let points = seriesSince(spec.metric, now - tuning.windowDays * 24 * 3600_000);
@@ -59,17 +73,17 @@ export function scoreComponent(spec, tuning, now, stalenessMs) {
   // which is precisely backwards: it makes a broken feed look like a calm
   // world and then hides real movement behind a too-wide MAD.
   if (spec.zeroIsMissing) points = points.filter((p) => p.value !== 0);
-  if (!points.length) return null;
+  if (!points.length) return { dropped: 'no_data' };
 
   const current = currentReading(points, now, tuning.currentWindowMs);
-  if (!current) return null;
-  if (now - current.ts > stalenessMs) return null; // stale — excluded, same as v0
+  if (!current) return { dropped: 'no_data' };
+  if (now - current.ts > stalenessMs) return { dropped: 'stale' }; // stale — excluded, same as v0
 
   const baseline = baselineFrom(points, {
     minSamples: tuning.minSamples,
     minSpanMs: tuning.minSpanMs,
   });
-  if (!baseline) return null; // too little history, or a constant series
+  if (!baseline) return { dropped: 'baseline' }; // too little history, or a constant series
 
   const { score, z, anomaly } = deviationScore(current.value, baseline, {
     zSpan: tuning.zSpan,
@@ -123,15 +137,18 @@ export function makeDomainIndex({ name, config, components }) {
   function compute(now = Date.now(), prevBand = null) {
     /** @type {Record<string, {score: number, raw: any, ts: number}>} */
     const scored = {};
+    /** @type {Record<string, DropReason>} */
+    const dropped = {};
 
     for (const spec of components) {
       const tuning = { ...config.deviation, ...(spec.tuning ?? {}) };
       const stalenessMs = config.stalenessMs[spec.key];
       const c = scoreComponent(spec, tuning, now, stalenessMs);
-      if (c) scored[spec.key] = c;
+      if ('dropped' in c) dropped[spec.key] = c.dropped;
+      else scored[spec.key] = c;
     }
 
-    return computeIndex({
+    const snapshot = computeIndex({
       components: scored,
       config: {
         weights: config.weights,
@@ -142,6 +159,12 @@ export function makeDomainIndex({ name, config, components }) {
       now,
       prevBand,
     });
+    // Attach even when there's no scoreable component left (snapshot is
+    // null then) — gatherAndCompute reports "no reading" in that case and
+    // dropped reasons aren't shown, but compute() itself stays a complete
+    // record of what happened this tick for anything that inspects it directly.
+    if (snapshot) snapshot.dropped = dropped;
+    return snapshot;
   }
 
   /** Computes, persists on band change or cadence, and broadcasts. */

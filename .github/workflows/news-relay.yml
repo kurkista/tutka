@@ -40,6 +40,8 @@ jobs:
             query: '(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (jamming OR GPS OR GNSS OR spoofing OR "undersea cable" OR pipeline OR sabotage OR drone OR incursion OR "border crossing" OR migrant)'
           - module: climate
             query: '(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (wildfire OR "forest fire" OR drought OR heatwave OR flooding OR "storm damage" OR "extreme weather" OR "grid resilience")'
+          - module: ru_finland
+            query: 'sourcecountry:russia (Finland OR Finnish OR Suomi)'
     env:
       GDELT_MODULE: ${{ matrix.module }}
       GDELT_QUERY: ${{ matrix.query }}

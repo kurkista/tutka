@@ -18,6 +18,54 @@ rather than written at the time, and are marked as such.
 
 ---
 
+## 2026-07-28 · MEDIUM · Consumer confidence component permanently excluded from Domain 5's index · RESOLVED
+
+**What happened:**
+Domain 5 (Yhteiskunta/Social)'s consumer-confidence component (`C`) has
+shown "vanhentunut — ei mukana" (stale — not included) since the domain
+launched, and could never have shown anything else. `pollConsumerConfidence`
+(`server/pollers/confidence.js`) requested only the 6 most recent months
+from Statistics Finland (`filter: 'top', values: ['6']`), but `C` is scored
+with `DEVIATION_MONTHLY`, which requires >=12 monthly samples spanning
+>=365 days before it will compute a baseline. Six months can never satisfy
+a twelve-month floor — this wasn't "still building baseline," it was
+structurally incapable of ever scoring. Only 2 points existed in the DB.
+Surfaced when the owner asked "what is going on here, ei mukana?" after
+seeing both `C` and the (unrelated, genuinely transient) `T` component
+excluded with the same generic label.
+
+**Root cause:**
+The query window was copy-pasted from `pollCpi`-style pollers without
+checking it against the specific baseline requirement the component's
+scoring tier (`DEVIATION_MONTHLY`) actually needs — a 6-month window is
+fine for a component scored with the default `DEVIATION` tier (3-day span),
+but silently wrong for one scored monthly against a full year.
+
+**Fix:**
+Widened the query to `values: ['400']` (~33 years). StatFin's underlying
+CCI_A1 series goes back to 1995M10 (confirmed live: 370 months returned,
+1995M10 -> 2026M07, all numeric) — comfortably covers the 12-sample/
+365-day floor. `putSeries` is idempotent per timestamp, so the wider window
+backfills safely on the next poll (jobs run immediately on boot).
+
+**Rule added:**
+When adding or reviewing a component scored with `DEVIATION_MONTHLY` (or
+any non-default deviation tier), check its poller's query window against
+that tier's `minSamples`/`minSpanMs` directly — don't assume a window that
+works for one tier's requirement works for another.
+
+**Follow-up (same day):** the frontend showed the identical "stale —
+excluded" label for every missing component regardless of cause, which is
+what made this bug hard to tell apart from an ordinary young-domain state
+in the first place. `scoreComponent()` (`server/indices/domainIndex.js`)
+now returns a reason (`no_data` | `stale` | `baseline`) instead of a bare
+null; `domainPanel.ts`/`status.ts` map it to distinct labels via
+`missingComponentLabel()` (`web/src/reading.ts`). Verified live: Domain 5's
+`T` (news tone) now correctly reads "building baseline" instead of "stale
+— excluded" for what is a genuinely transient condition, not a bug.
+
+---
+
 ## 2026-07-27 · LOW · Dependency-timeline rejected-sources panel would have rendered empty forever · RESOLVED
 
 **What happened:**

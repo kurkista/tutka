@@ -62,7 +62,7 @@ async function boot() {
   await markets.init(state);
   await hilkka.init();
   await timeline.init(state);
-  dependencyTimeline.init();
+  dependencyTimeline.init(state);
   infoenv.init(state.modules.infoenv);
   hybrid.init(state.modules.hybrid);
   infra.init(state.modules.infra);

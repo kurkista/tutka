@@ -223,6 +223,33 @@ function resample(points: SeriesData, buckets: number): SeriesData {
 }
 
 /**
+ * Group events landing in the same time bucket into one marker, so a burst
+ * (e.g. a first-poll backlog of many statements arriving within one window)
+ * draws as a single labelled line instead of a wall of dashed lines the
+ * chart can't visually separate anyway at typical panel widths.
+ *
+ * `width` matches `resample`'s own bucket width so a cluster corresponds to
+ * roughly one visual position on the series lines it sits alongside.
+ */
+function clusterEvents(events: DomainEvent[], width: number): Array<{ ts: number; count: number; first: DomainEvent }> {
+  const parsed = events
+    .map((e) => ({ ts: Date.parse(e.ts), e }))
+    .filter((x) => Number.isFinite(x.ts))
+    .sort((a, b) => a.ts - b.ts);
+  if (!parsed.length) return [];
+
+  const first = parsed[0].ts;
+  const grouped = new Map<number, { ts: number; count: number; first: DomainEvent }>();
+  for (const { ts, e } of parsed) {
+    const b = width > 0 ? Math.floor((ts - first) / width) : 0;
+    const g = grouped.get(b);
+    if (g) g.count++;
+    else grouped.set(b, { ts, count: 1, first: e });
+  }
+  return [...grouped.values()];
+}
+
+/**
  * One shared chart, with every series expressed in robust deviations from its
  * own median — the same yardstick server/indices/deviation.js scores with.
  *
@@ -242,6 +269,19 @@ export function makeUnifiedTimeline(el: HTMLElement, rows: UnifiedTimelineRow[],
   // Roughly one point per 2px of a typical panel — enough to keep every real
   // feature, few enough that a 2-minute series doesn't outdraw a daily one.
   const BUCKETS = 240;
+
+  // Overall x-axis domain across every series (points are ascending by ts),
+  // so event clusters line up with the same bucket width the series lines
+  // are resampled to, regardless of which single series is drawn first.
+  let minTs = Infinity;
+  let maxTs = -Infinity;
+  for (const r of rows) {
+    if (!r.points.length) continue;
+    minTs = Math.min(minTs, r.points[0][0]);
+    maxTs = Math.max(maxTs, r.points[r.points.length - 1][0]);
+  }
+  const bucketWidth = Number.isFinite(minTs) ? (maxTs - minTs) / BUCKETS : 0;
+  const clusters = clusterEvents(events, bucketWidth);
 
   const series = rows.map((r, i) => {
     const points = resample(r.points, BUCKETS);
@@ -271,7 +311,13 @@ export function makeUnifiedTimeline(el: HTMLElement, rows: UnifiedTimelineRow[],
               backgroundColor: SURFACE, padding: 4,
             },
           },
-          data: events.map((e) => ({ xAxis: Date.parse(e.ts), name: lang === 'fi' ? e.fi : e.en })),
+          data: clusters.map((c) => {
+            const title = lang === 'fi' ? c.first.fi : c.first.en;
+            return {
+              xAxis: c.ts,
+              name: c.count > 1 ? `${title} ${t('timeline.moreEvents', { n: c.count - 1 })}` : title,
+            };
+          }),
         },
       } : {}),
     };
