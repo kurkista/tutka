@@ -230,6 +230,16 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
 }
 .submarket-label-2 { margin-top: 14px; }
 
+/* The plain-language reading of a domain's index, promoted above the gauge
+   and its raw component numbers — a reader should get "what this domain is
+   telling me" before any chart or score, not after. */
+.panel-reading { font-size: 14.5px; line-height: 1.5; color: var(--ink-2); margin: 0 0 14px; }
+.panel-reading .band-word { font-weight: 600; }
+.panel-reading.band-NORMAL  .band-word { color: var(--status-good); }
+.panel-reading.band-NOTABLE .band-word { color: var(--status-warning); }
+.panel-reading.band-HIGH    .band-word { color: var(--status-serious); }
+.panel-reading.band-EXTREME .band-word { color: var(--status-critical); }
+
 .gauge { height: 190px; }
 .components { list-style: none; margin: 0; padding: 0; font-size: 13px; }
 .components li {
@@ -248,6 +258,18 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
 .components .stale { color: var(--muted); font-style: italic; }
 .component-why { padding: 4px 0 8px; font-size: 12px; color: var(--muted); }
 .component-why p { margin: 2px 0; }
+
+/* The dependency timeline's raw multi-series chart, demoted behind an
+   opt-in disclosure — a plain-language summary already covers "what's
+   going on" above it, so the seven-series robust-z chart is there for
+   whoever wants to look closer, not the first thing a visitor has to parse. */
+#dependencies-chart-details { margin-top: 4px; }
+#dependencies-chart-details summary {
+  cursor: pointer; color: var(--ink-2); font-size: 13.5px; font-weight: 600;
+  padding: 8px 0;
+}
+#dependencies-chart-details summary:hover { color: var(--ink); }
+#dependencies-chart-details[open] summary { margin-bottom: 6px; }
 
 .rejected-sources { margin-top: 8px; font-size: 12.5px; }
 .rejected-sources summary { cursor: pointer; color: var(--muted); }

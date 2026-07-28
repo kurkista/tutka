@@ -229,6 +229,48 @@ ever built, no standalone "X% chance of war" headline anywhere — it would be
 one more line on the dependency timeline, robust-z'd against its own
 baseline like everything else, not a bare probability claim.
 
+## Tier 4 — readability pass. Built 2026-07-28.
+
+Prompted by direct feedback that the site was "too confusing" — a visitor
+wants the current situation, trend, and history without digging, and the
+dependency timeline specifically (visually noisy marker cluster, six
+near-invisible domain-index lines next to Brent's year-long one) was the
+clearest example. Four fixes, each independently deployed and verified live:
+
+- **`server/pollers/confidence.js`**: Domain 5's consumer-confidence
+  component (`C`) could never score — the StatFin query asked for only 6
+  months while `DEVIATION_MONTHLY` needs 12 spanning a year. Widened to 400
+  months (StatFin's series goes back to 1995M10); confirmed live
+  (`baselineN: 48`, `baselineDays: 1430`). See INCIDENT_LOG.md, 2026-07-28.
+- **Drop-reason labels**: every component missing from a domain's index used
+  the same "stale — excluded" text, whether the real cause was staleness, an
+  as-yet-too-short baseline, or no data at all — which is what made the
+  confidence.js bug hard to tell apart from an ordinary young-domain state.
+  `scoreComponent()` (`server/indices/domainIndex.js`) now reports a reason
+  (`no_data` | `stale` | `baseline`); the frontend
+  (`missingComponentLabel()`, `web/src/reading.ts`) shows the right one.
+- **Dependency-timeline marker clustering**: a first-poll backlog left 43
+  official-statement markers crammed into a ~7h window, drawing as a wall of
+  dashed lines. `makeUnifiedTimeline` (`web/src/charts.ts`) now groups
+  events landing in the same resample bucket into one marker with a
+  "+N more" count. A fixed caption also explains why the six domain-index
+  lines are short next to Brent's: the `-v2` scoring-formula version bump
+  clips each series to its own formula's era, not a data outage.
+- **Promoted plain-language summaries, chart demoted to opt-in**: each
+  domain's one-sentence reading (`readingFor().detail`, already computed,
+  previously a small `.fineprint` line *after* the gauge and raw component
+  numbers) is now a distinct, band-coloured headline *before* them, on all
+  six domain panels including domain 1 (which had none at all). The
+  dependency timeline's seven-series robust-z chart — genuinely the most
+  complex chart on the site — is now collapsed behind a "Show the full
+  chart" disclosure, with a plain-language summary (which domain if any is
+  notable, Brent's current price) shown by default instead.
+
+No new i18n keys were needed beyond the disclosure label and the Brent
+sentence — the summary text reuses `dashboard.calmBody`, and the label
+mapping reuses `comp.stale`/`card.noBaseline`/`status.noData`, all already
+translated.
+
 ## Open loose ends from 2026-07-26
 
 - **Class B vessels are absent from the map entirely.** The AIS subscription

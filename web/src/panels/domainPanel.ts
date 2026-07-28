@@ -70,9 +70,9 @@ export function createDomainPanel(
     latest = snapshot;
     const bandEl = document.getElementById(`${key}-band`)!;
     const reading = readingFor(snapshot);
-    bandEl.className = snapshot ? `band-line band-${snapshot.band}` : 'band-line';
-    bandEl.textContent = snapshot
-      ? `${t('band.' + snapshot.band)} · ${Math.round(snapshot.value)} — ${reading.detail}`
+    bandEl.className = snapshot ? `panel-reading band-${snapshot.band}` : 'panel-reading';
+    bandEl.innerHTML = snapshot
+      ? `<span class="band-word">${t('band.' + snapshot.band)}</span> · ${Math.round(snapshot.value)} — ${reading.detail}`
       : t('status.warming');
 
     // The gauge only exists once this domain has been visited; SSE updates
