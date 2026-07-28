@@ -142,6 +142,7 @@
   "dir.below": "alle",
   "app.subtitle": "Pohjolan/Itämeren jännitemittari",
   "timeline.axis": "poikkeamaa normaalista",
+  "timeline.moreEvents": "(+{n} lisää)",
   "domain.1.short": "Sot.",
   "tip.now": "Nyt: {v}",
   "tip.normal": "30 päivän normaali: {v}",
@@ -168,5 +169,6 @@
   "nav.dependencies": "Riippuvuusaikajana",
   "dep.oil": "Brent-raakaöljy",
   "dep.explainer": "Kuusi osa-aluetta ja Brent-raakaöljy samalla yhteisellä asteikolla, jotta näkee mikä liikkuu yhdessä. Katkoviivat merkitsevät hallitusten, keskuspankkien ja kansainvälisten järjestöjen virallisia lausuntoja — vie kursori viivan päälle nähdäksesi otsikon ja linkin.",
+  "dep.versionNote": "Osa-alueen indeksiviiva kattaa vain ajan sen pisteytyskaavan viimeisimmästä päivityksestä — lyhyt viiva tarkoittaa äskettäistä kaavapäivitystä, ei puuttuvaa dataa. Brentin pidempi viiva on todellista historiaa, ei aukko muiden kuuden datassa.",
   "dep.disclaimer": "Näytetään samalla asteikolla vertailun vuoksi — ei väitettä siitä, että toinen aiheutti toisen."
 }
