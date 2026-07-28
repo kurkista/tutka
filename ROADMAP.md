@@ -256,3 +256,184 @@ Found during the same pass; each stands alone.
   `340px 1fr` on a 375px phone.
 - `gps_stale_pct` (collected from 2026-07-26) becomes scoreable after three
   days of baseline — decide then whether it is domain 2's third component.
+
+---
+
+# Backlog — owner review 2026-07-28, for later planning
+
+Four items the owner raised in one pass: "site still not palatable", what to
+take from a March data-source scouting doc, a longer-term micro-signal idea,
+and disinfo-campaign coverage. Diagnosis done, nothing built — logged here so
+a later planning pass (likely Opus) has the evidence without re-deriving it.
+
+## Event log is 96% noise — root cause found, not yet fixed
+
+The owner's "data doesn't inform me the way I expect" complaint traces to a
+concrete bug, not a vibe. Pulled the live `/api/eventlog?limit=100` on
+2026-07-28: **84 climate (Meteoalarm) + 6 nasa + 4 nordic + 3 whitehouse + 2
+infra + 1 un.** Only the 4 `nordic` events are on-topic Nordic/Baltic-tension
+signal — 96% of the flagship Tier 1 "site has memory" feature is routine
+weather warnings and unrelated global RSS noise (examples pulled from the
+live feed: a White House proclamation on "the 45th Anniversary of the
+Martyrdom of Father Stanley Rother", a NASA solar-eclipse press release, an
+ENISA EUVD CVE for a product called "Pivotick" with no Finland connection).
+
+Root cause: [server/pollers/statements.js](server/pollers/statements.js) inserts
+**every** RSS item from all 13 `STATEMENTS.sources` in
+[server/config.js:514](server/config.js:514) (White House, NASA, WHO,
+Greenpeace, ICRC, Fed, BoE, ECB, EC, Council of EU, IAEA, SUPO, UN) straight
+into the public event log with no Finland/Baltic/Russia relevance filter —
+only the `un` source has any filter at all, and it's a URL-slug-prefix match
+(`urlMatch`), not a content/keyword one. Meteoalarm has no severity floor
+either: every yellow-level warning across four countries logs as an event.
+
+Two independent, separately-scopeable fixes:
+- **Statements**: add a keyword filter (Finland/Baltic/Nordic/Russia/NATO/
+  Estonia/Latvia/Lithuania/Kremlin etc.) before `insertEvent` in
+  `pollStatement()`. Open design question: keep the *unfiltered* poll for the
+  dependency-timeline correlation use case (Tier 3 wanted general statement
+  cadence, not Finland-specific statements) and only filter what reaches the
+  shared `/api/eventlog`, or filter at ingest for both. The two features want
+  different things from the same feed.
+- **Meteoalarm**: raise the event-log floor to orange/red severity only, or
+  stop feeding yellow-level advisories into the shared log at all (keep them
+  domain-6-scoped, same "shown not scored" treatment other advisories get).
+
+## March docx (`/Users/scan/Claude/Finnish_Open_Data_Repositories.docx`) — what's new
+
+Cross-checked all ~50 sources in the owner's March scouting doc against
+METHODOLOGY.md/ROADMAP.md. Most (FMI, SYKE, NLS, Statistics Finland, Fingrid)
+are already integrated or already evaluated-and-rejected. Four are genuinely
+new, not previously considered by this project:
+
+- **Fintraffic Digitraffic Marine API** — official FI-run AIS/VTS/nautical-
+  warnings feed, EU/FI-based (fits the project's sourcing preference, unlike
+  AISStream's community feed). Directly relevant to the still-open "Domain 2
+  follow-up — build our own intel source" AIS cable-route anomaly detector
+  idea above: VTS messages and nautical warnings might already carry signal
+  AISStream's raw position stream doesn't.
+- **Hilma (public procurement)** + **PRH/YTJ business register** + **Eduskunta
+  bills/votes API** — the natural data sources for the micro-signal idea
+  below (permits, new-company filings, security-related legislative activity
+  as leading indicators).
+- **Yle Open Data** — Finnish-language news/metadata. A genuine complement to
+  GDELT (English-only) for domain 3; could catch how a narrative plays
+  natively rather than only how it's reported in English.
+- **Kela** open social-benefit data — a second real statistic candidate for
+  domain 5, same "score a real stat directly" precedent Statistics Finland's
+  CCI set.
+
+Not proposed for building now — logged as the answer to "what's usable."
+
+## Micro-signal composite (data-center-permit-style leading indicators)
+
+Owner's framing: individual weak signals (zoning permit, loan filing, local
+out-of-norm hiring, water-rights filing, contentious town-hall coverage)
+that mean little alone but point at something real in combination — e.g. a
+data center being built. Sources exist (Hilma/PRH/Eduskunta above, plus
+local-press GDELT queries). The blocker isn't data, it's the scoring shape:
+`server/indices/deviation.js` assumes a continuous, frequent series with a
+30-day trailing baseline. A permit filing doesn't recur on that cadence —
+forcing it through the deviation engine would either sit permanently null
+(not enough samples) or be gameable by a single event.
+
+Recommendation for whoever picks this up: don't force it into a 7th domain
+index. It needs a **burst/co-occurrence detection** primitive — closer to
+the event log's own gated-spike logic than to `engine.js`'s weighted
+deviation — probably its own scoring shape entirely. Worth designing
+properly, not urgent; keep as its own backlog line rather than folding into
+an existing domain.
+
+## Disinformation/influence-campaign coverage — already built, one real gap
+
+Domain 3 (Information environment) already does this: GDELT article-volume
+deviation (60%, `V` — literally a frequency meter) + tone-stress deviation
+(40%) against Finland/Baltic disinformation-keyword queries. Owner's "do we
+track sudden rise of dis/misinformation, frequency as a meter" is answered
+by the existing `V` component. EUvsDisinfo, the obvious EU-official second
+source, is confirmed dead (METHODOLOGY.md Domain 3: API backend
+DNS-unresolvable, website Cloudflare-blocks scripted requests). The real
+remaining gap, already scouted in Tier 3's blog-post-source follow-up but not
+built: **state-media RSS** (Xinhua confirmed working at
+`xinhuanet.com/english/rss/worldrss.xml`, TASS likely has one, unconfirmed)
+— tracking foreign state-media narrative volume directly would be a sharper
+campaign-detection signal than GDELT's "Western press volume mentioning
+disinformation" proxy.
+
+### Rabbit hole, 2026-07-28: EUvsDisinfo's own reference list
+
+Owner serendipitously found euvsdisinfo.eu/beyond-the-battlefield/ (EEAS +
+Ukraine's CCD joint FIMI report, June 2026) and its references section,
+without VPN so didn't click through. Confirmed the article itself loads fine
+via a real browser (Claude_Browser tab) even though the site Cloudflare-blocks
+plain server-side fetches — consistent with the existing "evaluated, not
+integrated" note above; browser automation was already flagged there as the
+only way in, this just confirms it. Pulled the reference list and filtered
+out one-off archived-post citations (archive.ph/ghostarchive.org/web.archive.org
+— just evidence links, not sources) to find the recurring organizations:
+**DFRLab** (dfrlab.org, Atlantic Council), **EU DisinfoLab** (disinfo.eu, runs
+a "Doppelganger Hub" tracker), **ISD Global** (isdglobal.org), **VIGINUM /
+France's SGDSN** (sgdsn.gouv.fr, periodic named-campaign technical reports),
+**EEAS's own FIMI annual report** page, and Estonia's Foreign Intelligence
+Service (valisluureamet.ee, already known — "one PDF/year" per the Tier 3
+blog-post follow-up above).
+
+None expose a structured API — same "report/PDF dump, no endpoint" shape
+already rejected for Eurobarometer/Eurofound. Not re-litigating that. What's
+untested: several of these (DFRLab, EU DisinfoLab, ISD, VIGINUM) are the kind
+of research org that sometimes runs a plain blog RSS even without a formal
+API — worth a cheap feasibility check (same lightweight pattern as the
+state-media-RSS idea directly above), not attempted yet.
+
+Same pass, second page: owner then opened euvsdisinfo.eu's own **4th EEAS
+annual FIMI report** ("Dismantling the FIMI House of Cards", March 2026) —
+itself one of the citations in the first report. Pulled and domain-counted
+its references too. Standout, not previously known to this project:
+**Hybrid CoE — the European Centre of Excellence for Countering Hybrid
+Threats** (hybridcoe.fi), physically based in **Helsinki**, cited here for a
+January 2026 paper specifically on Russian/Chinese hybrid capabilities *in
+the Arctic*. A Finland-based hybrid-threats research institute is directly
+on-topic for domain 2 (Hybrid & grey-zone threats) in a way nothing else
+found in either pass is — worth checking whether they publish anything with
+a feed (RSS/API) beyond one-off PDF papers.
+
+Other names surfaced, lower priority: **DISARM Foundation**
+(disarm.foundation) publishes the "DISARM Framework", an open structured
+taxonomy for disinfo tactics/techniques (MITRE-ATT&CK-style for FIMI) — a
+taxonomy, not a live feed, but worth a look if ever building a
+campaign-classification layer. **data.europa.eu** hosts a couple of actual
+structured apps (EU sanctions trackers, e.g. `eusanctionstracker`), not just
+PDFs — different shape from the rest of the EU-report citations and
+possibly has a real API underneath. **CheckFirst** (checkfirst.network)
+publishes frequent named-campaign investigations (Portal Kombat, Pravda
+network, Operation Overload) at a real cadence, similar candidate to DFRLab
+for an RSS check. Global Disinformation Index and NewsGuardTech are
+commercial rating services, not pursued.
+
+### Yandex — evaluated, rejected
+
+Owner had a third tab open on euvsdisinfo.eu's "Yandex: From tech innovation
+to information control" (June 2026) and asked whether tutka could tap Yandex
+itself as a source (its search/news results, as a window into what Russian
+domestic audiences see). Rejected, three independent reasons, any one of
+which would be disqualifying alone:
+
+1. **No accessible API.** Yandex N.V. dissolved in 2024; the international
+   arm split off as Nebius (Amsterdam-listed, unrelated to Russian consumer
+   products), and the Russian search/news/ecosystem business was sold to a
+   domestic Kremlin-linked consortium. Nothing ToS-sanctioned for an outside
+   project to pull from — only scraping a Russian-hosted, Russian-jurisdiction
+   platform would work at all.
+2. **Adversarial by design.** The EUvsDisinfo article itself documents Yandex
+   search/news results being deliberately state-shaped (the 2022 Bucha
+   search-sanitization example). Same unsolved problem already logged for the
+   Telegram military-blogger idea above: "the real barrier was always
+   verification of adversarial, sometimes deliberately-seeded content, not
+   access." No curation/verification layer exists in this project to make
+   that safe to ingest.
+3. **Sanctions exposure.** Yandex founder Arkady Volozh was EU-sanctioned
+   specifically for promoting pro-Kremlin propaganda (per the same article).
+   A different risk category than the free-EU-data sources tutka otherwise
+   uses.
+
+Not revisited unless one of these three facts changes.
