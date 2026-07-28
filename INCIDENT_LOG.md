@@ -52,10 +52,17 @@ backfills safely on the next poll (jobs run immediately on boot).
 When adding or reviewing a component scored with `DEVIATION_MONTHLY` (or
 any non-default deviation tier), check its poller's query window against
 that tier's `minSamples`/`minSpanMs` directly — don't assume a window that
-works for one tier's requirement works for another. A component can be
-"not included" for two very different reasons (temporarily too young vs.
-structurally incapable) and the frontend currently can't tell them apart
-either — see the follow-up in ROADMAP.md.
+works for one tier's requirement works for another.
+
+**Follow-up (same day):** the frontend showed the identical "stale —
+excluded" label for every missing component regardless of cause, which is
+what made this bug hard to tell apart from an ordinary young-domain state
+in the first place. `scoreComponent()` (`server/indices/domainIndex.js`)
+now returns a reason (`no_data` | `stale` | `baseline`) instead of a bare
+null; `domainPanel.ts`/`status.ts` map it to distinct labels via
+`missingComponentLabel()` (`web/src/reading.ts`). Verified live: Domain 5's
+`T` (news tone) now correctly reads "building baseline" instead of "stale
+— excluded" for what is a genuinely transient condition, not a bug.
 
 ---
 
