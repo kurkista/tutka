@@ -29,7 +29,7 @@ jobs:
       matrix:
         include:
           - module: nordic
-            query: '(Finland OR Baltic OR NATO) AND Russia AND (military OR troops OR incursion OR "air policing" OR "airspace violation" OR "border incident")'
+            query: '(Finland OR Baltic OR NATO) AND Russia AND (military OR troops OR incursion OR "air policing" OR "airspace violation" OR "border incident" OR drone)'
           - module: infoenv
             query: '(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (disinformation OR propaganda OR "influence operation" OR "information operation")'
           - module: infra
