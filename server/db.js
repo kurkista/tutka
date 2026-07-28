@@ -108,6 +108,7 @@ export function openDb(path) {
   migrateHpiSnapshots(db);
   migrateHeadlinesModuleColumn(db);
   migrateVol24hToVolToday(db);
+  migrateIndexSnapshotsDroppedColumn(db);
 
   return db;
 }
@@ -134,6 +135,17 @@ function migrateHeadlinesModuleColumn(db) {
   if (cols.some((c) => c.name === 'module')) return;
   db.exec("ALTER TABLE headlines ADD COLUMN module TEXT NOT NULL DEFAULT 'hormuz'");
   console.log('[db] added headlines.module column (backfilled existing rows as \'hormuz\')');
+}
+
+// Per-component drop reasons ('no_data' | 'stale' | 'baseline'), so the
+// frontend can distinguish "still building a baseline" from "genuinely
+// stale" instead of one generic label for every missing component (see
+// INCIDENT_LOG.md, 2026-07-28).
+function migrateIndexSnapshotsDroppedColumn(db) {
+  const cols = /** @type {any[]} */ (db.prepare('PRAGMA table_info(index_snapshots)').all());
+  if (cols.some((c) => c.name === 'dropped')) return;
+  db.exec("ALTER TABLE index_snapshots ADD COLUMN dropped TEXT NOT NULL DEFAULT '{}'");
+  console.log('[db] added index_snapshots.dropped column (backfilled existing rows as {})');
 }
 
 // One-time rename: `*_vol24h` → `*_vol_today`. This is not a reinterpretation
@@ -281,8 +293,8 @@ export function recentHeadlines(limit = 20, module) {
 /** @param {string} indexName e.g. 'hormuz', 'infoenv' */
 export function putIndexSnapshot(indexName, s) {
   db.prepare(
-    'INSERT OR REPLACE INTO index_snapshots (index_name, ts, value, band, components, version) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(indexName, s.ts, s.value, s.band, JSON.stringify(s.components), s.version);
+    'INSERT OR REPLACE INTO index_snapshots (index_name, ts, value, band, components, version, dropped) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(indexName, s.ts, s.value, s.band, JSON.stringify(s.components), s.version, JSON.stringify(s.dropped ?? {}));
 }
 
 /**
@@ -305,7 +317,10 @@ export function latestIndexSnapshot(indexName, version) {
       ? db.prepare('SELECT * FROM index_snapshots WHERE index_name = ? AND version = ? ORDER BY ts DESC LIMIT 1').get(indexName, version)
       : db.prepare('SELECT * FROM index_snapshots WHERE index_name = ? ORDER BY ts DESC LIMIT 1').get(indexName)
   );
-  if (row) row.components = JSON.parse(row.components);
+  if (row) {
+    row.components = JSON.parse(row.components);
+    row.dropped = JSON.parse(row.dropped ?? '{}');
+  }
   return row;
 }
 

@@ -7,7 +7,7 @@ import type { AppState, IndexSnapshot } from '../types';
 import { t, fmtNum } from '../i18n';
 import { makeGauge, setGauge } from '../charts';
 import { onFirstView, trackChart } from '../lazyView';
-import { readingFor, componentWhy } from '../reading';
+import { readingFor, componentWhy, missingComponentLabel } from '../reading';
 import { renderRejectedSources } from './methodology';
 
 const COMPONENT_KEYS = ['V', 'T'] as const;
@@ -54,7 +54,8 @@ function renderIndex(snapshot: IndexSnapshot | null): void {
         `<span class="val">${fmtNum(c.score, 0)}</span></summary>` +
         `<div class="component-why">${why.map((l) => `<p>${l}</p>`).join('')}</div></details>`;
     } else {
-      li.innerHTML = `<span>${t('comp.' + key)}</span><span class="stale">${t('comp.stale')}</span>`;
+      const why = snapshot ? missingComponentLabel(snapshot, key) : t('card.noBaseline');
+      li.innerHTML = `<span>${t('comp.' + key)}</span><span class="stale">${why}</span>`;
     }
     list.appendChild(li);
   }

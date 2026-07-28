@@ -15,7 +15,7 @@ import { makeGauge, setGauge, makeVTSparkline } from '../charts';
 import { getSeries } from '../api';
 import { headlineChip } from '../headlineChip';
 import { onFirstView, trackChart } from '../lazyView';
-import { readingFor, componentWhy } from '../reading';
+import { readingFor, componentWhy, missingComponentLabel } from '../reading';
 import { renderRejectedSources } from './methodology';
 
 export interface DomainPanelController {
@@ -90,11 +90,12 @@ export function createDomainPanel(
           `<span class="val">${fmtNum(c.score, 0)}</span></summary>` +
           `<div class="component-why">${why.map((l) => `<p>${l}</p>`).join('')}</div></details>`;
       } else {
-        // A missing component means "stale" only when the domain is otherwise
-        // reporting. With no snapshot at all the cause is almost always too
-        // little history for a baseline, and calling that "stale — excluded"
-        // blames the feed for something that is just the domain being young.
-        const why = snapshot ? t('comp.stale') : t('card.noBaseline');
+        // A missing component's cause varies — no snapshot at all is almost
+        // always the whole domain being young; within a snapshot, dropped[ck]
+        // (see missingComponentLabel) distinguishes "still building a
+        // baseline" from genuine staleness instead of blaming the feed for
+        // either indiscriminately.
+        const why = snapshot ? missingComponentLabel(snapshot, ck) : t('card.noBaseline');
         li.innerHTML = `<span>${t('comp.' + ck)}</span><span class="stale">${why}</span>`;
       }
       list.appendChild(li);
