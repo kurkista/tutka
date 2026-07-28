@@ -727,7 +727,7 @@ export const GDELT = {
     // vol_daily/vol_today/median30d machinery as-is; the frontend derives
     // 24h/7d/30d-vs-season comparisons from the accumulated vol_daily series
     // once enough history exists.
-    ruFinland: {
+    ru_finland: {
       module: 'ru_finland',
       query: 'sourcecountry:russia (Finland OR Finnish OR Suomi)',
       seriesPrefix: 'gdelt_rufi_',
