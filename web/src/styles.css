@@ -283,9 +283,13 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
 .chart { height: 240px; }
 
 .counters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.counters-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
 .counter { border: 1px solid var(--grid); border-radius: 8px; padding: 8px 10px; }
 .counter .num { font-family: var(--font-mono); font-size: 19px; font-weight: 600; color: var(--ink); }
 .counter .lbl { font-size: 11px; color: var(--muted); }
+
+.tracker-card { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--grid); }
+.tracker-card h3 { font-size: 14px; margin: 0 0 4px; }
 
 .layers { list-style: none; margin: 0; padding: 0; }
 .layer-row { display: flex; align-items: flex-start; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--grid); }

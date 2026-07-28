@@ -18,6 +18,43 @@ rather than written at the time, and are marked as such.
 
 ---
 
+## 2026-07-28 · LOW · New GDELT tracker's config key didn't match its module value, 404ing every relay POST · RESOLVED
+
+**What happened:**
+Adding a new standalone tracker (Russia-based media mentions of Finland,
+`GDELT.modules`) used the object key `ruFinland` while its own `module`
+field was `'ru_finland'`. Every other entry in `GDELT.modules` already
+follows the convention key === module value (`nordic: { module: 'nordic'
+}`, etc.) — this one didn't. `POST /api/ingest/gdelt/:module`
+(`server/http.js`) looks up `GDELT.modules[req.params.module]` by object
+key, not by the `.module` field, so every relay POST to
+`/api/ingest/gdelt/ru_finland` 404'd with "unknown module". The fetch half
+of the relay job succeeded (when GDELT wasn't rate-limiting it), masking
+the failure until the POST step's own log was checked.
+
+**Root cause:**
+Copy-paste from an established pattern without checking the one invariant
+that made the pattern work — the object key and the `module:` field are
+never verified against each other anywhere in the code (no runtime
+assertion, no test), so a mismatch is silent until the specific endpoint
+that relies on it is hit.
+
+**Fix:**
+Renamed the object key from `ruFinland` to `ru_finland`, matching the
+existing convention. Caught by manually dispatching the news-relay workflow
+and reading the `ru_finland` job's own step log (not just its green
+checkmark) — the job-level status was misleadingly "success" even while
+POSTing 404s, because the script doesn't check the ingest response's HTTP
+status against expectations beyond a bare error message.
+
+**Rule added:**
+When adding an entry to `GDELT.modules`, the object key and the `module:`
+field must be identical — this is what every ingest/relay lookup assumes,
+nowhere enforced. After adding a new relay-fed module, manually dispatch
+the workflow once and read that specific job's full log (not just whether
+it went green) before considering the wiring done — a rate-limited fetch
+and a 404'd POST both show as compatible with "job succeeded" at a glance.
+
 ## 2026-07-28 · MEDIUM · Consumer confidence component permanently excluded from Domain 5's index · RESOLVED
 
 **What happened:**

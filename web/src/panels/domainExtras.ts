@@ -90,6 +90,60 @@ function renderConfidence(metric: { ts: number; value: number } | null): void {
     : `<p class="fineprint">${t('status.noData')}</p>`;
 }
 
+// A "season" comparison needs real history on both sides: ~30 days recent
+// plus at least another 30 days before that to call "typical" — so 60 days
+// is the floor, not the 3-day/48-sample bar the scored deviation tiers use
+// elsewhere. This tracker is unscored precisely so it's not held to that
+// bar and can just say "still collecting" honestly until then, the same
+// spirit as a young domain's baseline gap, just a plainer implementation
+// since no domain index depends on it (see chat decision 2026-07-28).
+const RUFI_SEASON_MIN_DAYS = 60;
+
+export function initInfoenvExtras(_state: AppState): void {
+  onFirstView('3', async () => {
+    try {
+      renderRuFinland(await getSeries('gdelt_rufi_vol_daily', 400));
+    } catch {
+      renderRuFinland([]);
+    }
+  });
+}
+
+function renderRuFinland(daily: [number, number][]): void {
+  const el = document.getElementById('infoenv-rufi')!;
+  if (daily.length === 0) {
+    el.innerHTML = `<p class="fineprint">${t('rufi.building')}</p>`;
+    return;
+  }
+
+  const sum = (rows: [number, number][]) => rows.reduce((a, [, v]) => a + v, 0);
+  const lastDay = daily[daily.length - 1];
+  const last7 = sum(daily.slice(-7));
+  const last30 = sum(daily.slice(-30));
+
+  let seasonLine = '';
+  if (daily.length >= RUFI_SEASON_MIN_DAYS) {
+    const prior = daily.slice(0, -30).map(([, v]) => v).sort((a, b) => a - b);
+    const priorMedian = prior[Math.floor(prior.length / 2)];
+    const expected30 = priorMedian * 30;
+    if (expected30 > 0) {
+      const pct = Math.round((last30 / expected30) * 100);
+      seasonLine = `<p class="fineprint">${t('rufi.vsSeason', { pct })}</p>`;
+    }
+  } else {
+    seasonLine = `<p class="fineprint">${t('rufi.buildingSeason', { days: daily.length, needed: RUFI_SEASON_MIN_DAYS })}</p>`;
+  }
+
+  el.innerHTML = `
+    <div class="counters-3">
+      <div class="counter"><div class="num">${fmtNum(lastDay[1], 0)}</div><div class="lbl">${t('rufi.lastDay', { date: fmtDate(lastDay[0]) })}</div></div>
+      <div class="counter"><div class="num">${fmtNum(last7, 0)}</div><div class="lbl">${t('rufi.last7')}</div></div>
+      <div class="counter"><div class="num">${fmtNum(last30, 0)}</div><div class="lbl">${t('rufi.last30')}</div></div>
+    </div>
+    ${seasonLine}
+  `;
+}
+
 export function initClimateExtras(state: AppState): void {
   renderHotspots(state.metrics.firms_hotspot_count ?? null);
   onFirstView('6', async () => {

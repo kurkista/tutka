@@ -271,6 +271,45 @@ sentence — the summary text reuses `dashboard.calmBody`, and the label
 mapping reuses `comp.stale`/`card.noBaseline`/`status.noData`, all already
 translated.
 
+## Tier 5 — a live gap and a new tracker. Built 2026-07-28.
+
+Prompted by the owner spotting a real news story (Puolustusvoimat's brief
+airspace/maritime closure off Kotka, tied to Ukraine-Russia drone spillover)
+that never surfaced anywhere on the site.
+
+- **Domain 1's GDELT query had no `drone` keyword.** Domain 2 (hybrid)
+  already queried for it; Domain 1 (state/military tension) didn't, so a
+  Finland-specific drone incident would only ever land in Domain 2, not the
+  domain a reader would expect it in. Fixed in both places that matter: the
+  query in `server/config.js` (read by the direct in-app poller) **and**
+  the duplicated copy in `.github/workflows/news-relay.yml` (read by the
+  news-relay cron — the path that actually delivers data, since Fly's
+  egress IP is blocked by GDELT). Missing the second one would have made
+  the first a no-op in production; caught before it shipped by checking a
+  live `workflow_dispatch` run's actual query string, not just the deploy.
+- **New standalone tracker: Russian state media's attention on Finland.**
+  Not a domain-index component — a `sourcecountry:russia (Finland OR
+  Finnish OR Suomi)` GDELT query (`GDELT.modules.ru_finland`), reusing the
+  existing volume/tone/headline poller machinery as-is. Shown on Domain 3's
+  panel as three raw counts (last day / 7d / 30d) plus a comparison to a
+  prior period once ≥60 days of history exist — deliberately *not* folded
+  into Domain 3's published score, since that's the kind of change this
+  project treats carefully (see METHODOLOGY.md's v0 scoring incidents).
+  Reads "just added — still collecting" honestly until real history
+  accumulates, same spirit as a young domain's baseline gap.
+- **Found and fixed while wiring the tracker in**: the new module's config
+  key (`ruFinland`) didn't match its `module` field (`ru_finland`) — the
+  ingest endpoint looks up `GDELT.modules` by object key, so every relay
+  POST 404'd on the first live run. Every other module already follows
+  key === module; this one didn't, until a live `workflow_dispatch` run
+  caught it. See INCIDENT_LOG.md, 2026-07-28.
+- **Process note**: this session also discovered `main` had drifted behind
+  this feature branch by several commits (Tier 4 plus both fixes above) —
+  the news-relay cron reads its workflow file from `main` regardless of
+  what's deployed to Fly, so a fix living only on a feature branch is
+  invisible in production. Merged and pushed after explicit confirmation
+  (merging shared branch state isn't a same-branch commit+push).
+
 ## Open loose ends from 2026-07-26
 
 - **Class B vessels are absent from the map entirely.** The AIS subscription
