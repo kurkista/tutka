@@ -19,6 +19,7 @@ import { initMethodology } from './panels/methodology';
 import { createDomainPanel } from './panels/domainPanel';
 import { initDomainNav, setActiveDomain } from './panels/domainNav';
 import {
+  initInfoenvExtras,
   initInfraExtras, onInfraMetric,
   initSocialExtras, onSocialMetric,
   initClimateExtras, onClimateMetric, resizeHotspotMap,
@@ -68,6 +69,7 @@ async function boot() {
   infra.init(state.modules.infra);
   social.init(state.modules.social);
   climate.init(state.modules.climate);
+  initInfoenvExtras(state);
   initInfraExtras(state);
   initSocialExtras(state);
   initClimateExtras(state);
