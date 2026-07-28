@@ -109,6 +109,13 @@ export function initInfoenvExtras(_state: AppState): void {
   });
 }
 
+/** A signed, rounded percentage in this project's established convention
+ * (see hilkka.ts) — Intl.NumberFormat already renders the locale's own
+ * minus sign for negatives, so only the '+' needs adding here. */
+function fmtDev(pct: number): string {
+  return `${pct >= 0 ? '+' : ''}${fmtNum(pct, 0)}%`;
+}
+
 function renderRuFinland(daily: [number, number][]): void {
   const el = document.getElementById('infoenv-rufi')!;
   if (daily.length === 0) {
@@ -118,29 +125,48 @@ function renderRuFinland(daily: [number, number][]): void {
 
   const sum = (rows: [number, number][]) => rows.reduce((a, [, v]) => a + v, 0);
   const lastDay = daily[daily.length - 1];
-  const last7 = sum(daily.slice(-7));
-  const last30 = sum(daily.slice(-30));
+  const window7 = daily.slice(-7);
+  const window30 = daily.slice(-30);
+  const last7 = sum(window7);
+  const last30 = sum(window30);
 
-  let seasonLine = '';
+  // Every window ends on the same day and is a rolling total, not a
+  // disjoint period — the 7d and 30d figures both include today's count,
+  // and 30d includes the same days 7d does. Spelling that out plus the
+  // exact covered dates is the whole fix for "what are these segments".
+  const rangeNote = t('rufi.windowsNote', {
+    date: fmtDate(lastDay[0]),
+    start7: fmtDate(window7[0][0]),
+    start30: fmtDate(window30[0][0]),
+  });
+
+  let devDay = '', dev7 = '', dev30 = '';
+  let footNote = '';
   if (daily.length >= RUFI_SEASON_MIN_DAYS) {
+    // "Prior period" = everything before the most recent 30 days — kept
+    // separate from window30 on purpose, so the comparison is against an
+    // earlier stretch, not against itself.
     const prior = daily.slice(0, -30).map(([, v]) => v).sort((a, b) => a - b);
     const priorMedian = prior[Math.floor(prior.length / 2)];
-    const expected30 = priorMedian * 30;
-    if (expected30 > 0) {
-      const pct = Math.round((last30 / expected30) * 100);
-      seasonLine = `<p class="fineprint">${t('rufi.vsSeason', { pct })}</p>`;
+    if (priorMedian > 0) {
+      const pctOf = (actual: number, days: number) => Math.round((actual / (priorMedian * days) - 1) * 100);
+      devDay = `<div class="dev">${fmtDev(pctOf(lastDay[1], 1))}</div>`;
+      dev7 = `<div class="dev">${fmtDev(pctOf(last7, 7))}</div>`;
+      dev30 = `<div class="dev">${fmtDev(pctOf(last30, 30))}</div>`;
+      footNote = `<p class="fineprint">${t('rufi.devExplainer')}</p>`;
     }
   } else {
-    seasonLine = `<p class="fineprint">${t('rufi.buildingSeason', { days: daily.length, needed: RUFI_SEASON_MIN_DAYS })}</p>`;
+    footNote = `<p class="fineprint">${t('rufi.buildingSeason', { days: daily.length, needed: RUFI_SEASON_MIN_DAYS })}</p>`;
   }
 
   el.innerHTML = `
+    <p class="fineprint">${rangeNote}</p>
     <div class="counters-3">
-      <div class="counter"><div class="num">${fmtNum(lastDay[1], 0)}</div><div class="lbl">${t('rufi.lastDay', { date: fmtDate(lastDay[0]) })}</div></div>
-      <div class="counter"><div class="num">${fmtNum(last7, 0)}</div><div class="lbl">${t('rufi.last7')}</div></div>
-      <div class="counter"><div class="num">${fmtNum(last30, 0)}</div><div class="lbl">${t('rufi.last30')}</div></div>
+      <div class="counter"><div class="num">${fmtNum(lastDay[1], 0)}</div><div class="lbl">${t('rufi.lastDay', { date: fmtDate(lastDay[0]) })}</div>${devDay}</div>
+      <div class="counter"><div class="num">${fmtNum(last7, 0)}</div><div class="lbl">${t('rufi.last7', { date: fmtDate(window7[0][0]) })}</div>${dev7}</div>
+      <div class="counter"><div class="num">${fmtNum(last30, 0)}</div><div class="lbl">${t('rufi.last30', { date: fmtDate(window30[0][0]) })}</div>${dev30}</div>
     </div>
-    ${seasonLine}
+    ${footNote}
   `;
 }
 
