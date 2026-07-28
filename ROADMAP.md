@@ -296,7 +296,13 @@ that never surfaced anywhere on the site.
   into Domain 3's published score, since that's the kind of change this
   project treats carefully (see METHODOLOGY.md's v0 scoring incidents).
   Reads "just added — still collecting" honestly until real history
-  accumulates, same spirit as a young domain's baseline gap.
+  accumulates, same spirit as a young domain's baseline gap. Card title
+  reworded same day to "Finland in Russian state media" / "Suomi
+  venäläisessä valtiomediassa" (from an initial "Russian state media on
+  Finland" framing), so Finland — not the outlets — is the subject.
+  Owner flagged the missing per-window % the same day; confirmed
+  expected, not a bug — the ≥60-day gate means no comparison can show
+  until the tracker has been live that long.
 - **Found and fixed while wiring the tracker in**: the new module's config
   key (`ruFinland`) didn't match its `module` field (`ru_finland`) — the
   ingest endpoint looks up `GDELT.modules` by object key, so every relay
