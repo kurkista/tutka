@@ -48,7 +48,7 @@
   "fingrid.shortage.shortage": "Sähköpula",
   "social.confidence": "Tilastokeskuksen kuluttajien luottamusindikaattori, {month}",
   "climate.hotspots": "NASA FIRMSin aktiiviset palokohteet",
-  "rufi.title": "Venäläinen valtiomedia Suomesta",
+  "rufi.title": "Suomi venäläisessä valtiomediassa",
   "rufi.explainer": "Kuinka usein Venäjälle GDELT:n omassa maaluokittelussa merkityt tiedotusvälineet (mm. TASS, RIA Novosti, Sputnik, RT) mainitsevat Suomen missä tahansa yhteydessä. Näytetään, ei pisteytetä — mikään indeksi ei käytä tätä.",
   "rufi.building": "Juuri lisätty — kerätään vielä. Tarkista uudelleen, kun GDELT:n ensimmäiset täydet päivät on saatu.",
   "rufi.windowsNote": "Liukuvia kokonaismääriä, päättyen {date} — 7 päivän luku (alkaen {start7}) sisältyy 30 päivän lukuun (alkaen {start30}), ne eivät ole erillisiä jaksoja.",

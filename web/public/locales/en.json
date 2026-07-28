@@ -49,7 +49,7 @@
   "fingrid.shortage.shortage": "Shortage",
   "social.confidence": "Statistics Finland consumer confidence, {month}",
   "climate.hotspots": "NASA FIRMS active-fire hotspots",
-  "rufi.title": "Russian state media on Finland",
+  "rufi.title": "Finland in Russian state media",
   "rufi.explainer": "How often Russia-based outlets (GDELT's own country classification — includes TASS, RIA Novosti, Sputnik, RT) mention Finland at all, in any context. Shown, not scored — no domain index uses this.",
   "rufi.building": "Just added — still collecting. Check back once GDELT's first full days of data have come in.",
   "rufi.windowsNote": "Rolling totals ending {date} — the 7-day figure (from {start7}) is included in the 30-day one (from {start30}), they're not separate periods.",
