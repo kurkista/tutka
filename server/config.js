@@ -656,7 +656,7 @@ export const GDELT = {
     // is visible.
     nordic: {
       module: 'nordic',
-      query: '(Finland OR Baltic OR NATO) AND Russia AND (military OR troops OR incursion OR "air policing" OR "airspace violation" OR "border incident")',
+      query: '(Finland OR Baltic OR NATO) AND Russia AND (military OR troops OR incursion OR "air policing" OR "airspace violation" OR "border incident" OR drone)',
       seriesPrefix: 'gdelt_nordic_',
       pollMs: 30 * 60_000,
       calmStart: '20250101000000',
