@@ -7,7 +7,12 @@ import { AIS } from './config.js';
 const state = {
   connected: false,
   disabled: false,
+  // Timestamp of the last *real* AISStream message — never touched by
+  // reconnects. connectedAt is the watchdog's separate grace-period anchor;
+  // see the 2026-08-10 incident log entry for why conflating the two hid a
+  // 5-day-long silent outage behind a "streaming: true" status.
   lastMsgTs: 0,
+  connectedAt: 0,
   msgCount: 0,
   attempts: 0,
 };
@@ -29,9 +34,13 @@ export function startAis(onMessage) {
   }
   connect(onMessage);
 
-  // Watchdog: AISStream sometimes stalls without closing the socket.
+  // Watchdog: AISStream sometimes stalls without closing the socket. The
+  // baseline is the later of the last real message and the last connect —
+  // a fresh socket gets a fair `stallMs` grace period before being judged
+  // silent, but once a message has arrived, only that message's age counts.
   setInterval(() => {
-    if (state.connected && Date.now() - state.lastMsgTs > AIS.stallMs) {
+    const since = Math.max(state.lastMsgTs, state.connectedAt);
+    if (state.connected && Date.now() - since > AIS.stallMs) {
       console.warn('[ais] no messages for 3 min — forcing reconnect');
       try { socket?.close(); } catch { /* already closing */ }
     }
@@ -48,7 +57,7 @@ function connect(onMessage) {
 
   socket.addEventListener('open', () => {
     state.connected = true;
-    state.lastMsgTs = Date.now();
+    state.connectedAt = Date.now();
     console.log('[ais] connected, subscribing to bounding box', JSON.stringify(AIS.boundingBox));
     socket?.send(JSON.stringify({
       APIKey: AIS.apiKey,
@@ -99,6 +108,13 @@ export function aisStatus() {
     // connected-but-silent = AISStream has no receiver coverage for the
     // region (observed for the whole Middle East on 2026-07-09, mid-crisis).
     // The UI shows this as "receivers dark", not as "no ships".
-    streaming: state.msgCount > 0,
+    //
+    // Recency, not lifetime: `msgCount > 0` was a monotonic counter that,
+    // once positive, stayed true forever — a 5-day total outage on
+    // 2026-08-10 still read "streaming: true" the whole time, because some
+    // message had arrived at some point since the last restart. A feed is
+    // only honestly "streaming" if something arrived within the same window
+    // that would otherwise trigger the watchdog's reconnect.
+    streaming: state.lastMsgTs > 0 && Date.now() - state.lastMsgTs <= AIS.stallMs,
   };
 }

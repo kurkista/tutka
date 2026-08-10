@@ -18,6 +18,58 @@ rather than written at the time, and are marked as such.
 
 ---
 
+## 2026-08-10 · HIGH · Ships (AIS) status read "live" for 5 days while the feed sent nothing · OPEN (status bug fixed, feed outage unresolved)
+
+**What happened:**
+Owner reported ships missing from domain 1's map. `nordic_vessels_in_zone`
+had been 0 on every sample since 2026-08-05T13:54:32Z (previously 267) — a
+full 5 days of zero vessels — yet the "Ships (AIS)" row on the live site
+showed green/"live" the whole time. Direct observation on 2026-08-10
+confirmed the underlying connection is genuinely silent: `msgCount` sat
+frozen at the same value across multiple `/api/state` polls spanning a live
+reconnect cycle. AISStream accepts the connection and subscription (no
+`stream error` frame, so the key isn't outright rejected) but is sending
+zero `PositionReport`/`ShipStaticData` messages.
+
+**Root cause:**
+Two bugs in `server/ais.js` compounded to hide the outage instead of
+surfacing it:
+1. `streaming: msgCount > 0` measured "has this process ever heard
+   anything," not "is it hearing anything now" — `msgCount` is a lifetime
+   counter that never resets, so once any message had arrived since the
+   last restart (2026-07-28), the flag stayed `true` forever regardless of
+   whether the feed later went completely silent.
+2. `lastMsgTs` was reset to `Date.now()` on every socket `open`, not only on
+   real messages — so the watchdog's own forced reconnects (every ~3.5 min
+   once stalled) kept refreshing the externally-visible "last message"
+   timestamp, making a 5-day-old silence look only minutes old to anything
+   reading `/api/state`.
+
+**Fix:**
+Split `connectedAt` (set on `open`, the watchdog's grace-period anchor) from
+`lastMsgTs` (now set only by real messages). `streaming` is now `lastMsgTs`
+within `AIS.stallMs` of now — the same window the watchdog already uses to
+judge a connection stalled, so the two can no longer disagree.
+
+**Still open — needs the owner:** the status bug explains why the outage
+went unnoticed, not why AISStream stopped sending anything. The
+Helsinki–Tallinn corridor is high-traffic; 5 days of total silence on a
+connection that's accepted and error-free reads more like a free-tier
+quota/account issue than a real receiver-coverage gap (the precedent below
+was hours, during an active war, not 5 quiet days). Check the key's status
+on aisstream.io's dashboard; regenerating it is the likely next step if it
+looks throttled or expired.
+
+**Rule added:** a status flag must answer "is this true right now," not
+"has this ever been true." Any flag built from a monotonic counter
+(`msgCount`, a total-runs tally, etc.) needs an explicit recency window or
+it can only ever latch one direction. Same failure shape as the two AIS
+incidents below: a broken feed and a calm world render identically unless
+every *derived* status is checked for whether it can un-latch, not just the
+raw series.
+
+---
+
 ## 2026-07-28 · LOW · New GDELT tracker's config key didn't match its module value, 404ing every relay POST · RESOLVED
 
 **What happened:**
