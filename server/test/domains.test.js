@@ -12,14 +12,15 @@ const DOMAINS = [
   { n: 1, name: 'nordic', config: NORDIC, keys: ['V', 'T'] },
   { n: 2, name: 'hybrid', config: HYBRID, keys: ['V', 'T'] },
   { n: 3, name: 'infoenv', config: INFOENV, keys: ['V', 'T'] },
-  { n: 4, name: 'infra', config: INFRA, keys: ['V', 'T'] },
+  // infra is v3: P (electricity price) joined V/T — see indices/infra.js.
+  { n: 4, name: 'infra', config: INFRA, keys: ['V', 'T', 'P'], version: 'infra-v3' },
   { n: 5, name: 'social', config: SOCIAL, keys: ['V', 'T', 'C'] },
   { n: 6, name: 'climate', config: CLIMATE, keys: ['V', 'T', 'F'] },
 ];
 
-for (const { n, name, config, keys } of DOMAINS) {
+for (const { n, name, config, keys, version } of DOMAINS) {
   test(`domain ${n} (${name}): config is coherent`, () => {
-    assert.equal(config.version, `${name}-v2`, 'version must be bumped with the formula change');
+    assert.equal(config.version, version ?? `${name}-v2`, 'version must be bumped with the formula change');
     assert.equal(config.bands, DEVIATION_BANDS, 'all v1+ domains share one band vocabulary');
 
     // V reads one point per complete UTC day, stamped at that day's 00:00.

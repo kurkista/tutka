@@ -90,13 +90,15 @@ EU-official secondary source) isn't integrated yet.
 ## Domain 4 — Civic & critical infrastructure
 
 Tracks cyberattack/energy/water/telecom-disruption pressure around
-Finland/Baltic keywords, same GDELT two-component shape as domains 1/3.
+Finland/Baltic keywords via the same GDELT mechanism as domains 1/3, combined
+with Finnish spot electricity price (pörssisähkö) — the third domain (after
+domains 5 and 6) to score a real external source directly into the index.
 NCSC-FI, ENISA's EUVD, and CERT-EU advisory feeds are logged alongside it as
 headlines (shown, not scored); Fingrid's power-system-state and
 electricity-shortage-status traffic lights are polled and shown as their
-own widget on the deep-dive view (shown, not scored — same reasoning as the
-advisory feeds). See METHODOLOGY.md for the full formula and source
-verification notes.
+own widget on the deep-dive view (shown, not scored — a 1–5 categorical is a
+poor fit for the same deviation scoring the price component uses). See
+METHODOLOGY.md for the full formula and source verification notes.
 
 ## Domain 5 — Social stability
 

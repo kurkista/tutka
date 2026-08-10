@@ -33,6 +33,7 @@
   "comp.T": "News tone",
   "comp.C": "Consumer confidence",
   "comp.F": "Fire hotspots (FIRMS)",
+  "comp.P": "Electricity price",
   "comp.stale": "stale — excluded",
   "fingrid.title": "Fingrid grid status",
   "fingrid.explainer": "Fingrid's own real-time incident assessment — shown, not scored.",

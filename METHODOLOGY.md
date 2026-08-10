@@ -319,20 +319,24 @@ stable programmatic channel.
 
 ## Domain 4 — Civic & critical infrastructure
 
-*Version: **infra-v2***
+*Version: **infra-v3***
 
 Tracks cyberattack/energy/water/telecom-disruption pressure around
-Finland/Baltic keywords. Same GDELT mechanism and two-component shape as
-domains 1 and 3.
+Finland/Baltic keywords via the same GDELT mechanism as domains 1 and 3,
+combined with Finnish spot electricity price (pörssisähkö) — the third
+domain (after domain 5's Consumer Confidence and domain 6's FIRMS) to score
+a real external source directly into the index rather than only showing it
+alongside.
 
 ### The index
 
-`infra = 0.6·V + 0.4·T`
+`infra = 0.45·V + 0.3·T + 0.25·P`
 
 | | Component | Input | Normalization |
 |---|---|---|---|
-| **V** | News volume (60%) | GDELT 24 h article volume for `(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (cyberattack OR "cyber attack" OR ransomware OR "power outage" OR blackout OR "grid failure" OR "critical infrastructure")` | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **up**. |
-| **T** | Tone stress (40%) | GDELT 24 h average tone for the same query | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **down**. |
+| **V** | News volume (45%) | GDELT 24 h article volume for `(Finland OR Estonia OR Latvia OR Lithuania OR Baltic) AND (cyberattack OR "cyber attack" OR ransomware OR "power outage" OR blackout OR "grid failure" OR "critical infrastructure")` | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **up**. |
+| **T** | Tone stress (30%) | GDELT 24 h average tone for the same query | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **down**. |
+| **P** | Electricity price (25%) | Finnish spot price, c/kWh incl. VAT, 15-min resolution (`api.porssisahko.net`, see `pollers/electricity.js`) | Deviation from its own trailing 30-day median (see shared section). Concerning direction: **up**. |
 
 **Bands:** < 25 **NORMAL** · 25–49 **NOTABLE** · 50–74 **HIGH** · ≥ 75
 **EXTREME** — 0 is normal, 100 is most unusual, and the vocabulary is shared
@@ -340,7 +344,22 @@ across all six domains because the number now means the same thing in each.
 A band change must clear the boundary by 2 points (hysteresis). See
 [How every component is scored (v1)](#how-every-component-is-scored-v1).
 
-**Staleness handling:** same as domains 1/3 (V: 3h, T: 24h).
+**Staleness handling:** V: 52h, T: 24h (same as domains 1/3); P: 12h — the
+poller runs every 3h and each fetch covers the latest ~48h at 15-min
+resolution, so 12h gives a few missed polls of slack before the component
+drops out.
+
+**Honest caveat on P:** electricity price moves for plenty of mundane
+reasons (routine maintenance, ordinary seasonal demand, market mechanics)
+as often as for genuine infrastructure stress — a materially noisier, less
+specific signal than V/T's cyberattack-keyword news pressure. It's weighted
+lower than either for that reason, and it should be read as **grid
+economic stress**, not as an attack indicator. The link is real, not
+invented: sustained price spikes reflect exactly the kind of cross-border
+supply fragility (hydro reservoir levels, import dependency on gas-fired
+generation, nuclear maintenance timing) this domain exists to track — see
+[HS, 2026-08-10](https://www.hs.fi/talous/art-2000012194722.html) for the
+autumn-2026 case that motivated scoring it.
 
 ### Advisory feeds (shown, not scored)
 
@@ -361,10 +380,21 @@ way to turn advisory counts into a signal:
 **Fingrid Open Data** (power-system-state traffic light, dataset 209, and
 electricity-shortage status, dataset 336) is polled but not yet wired into
 either the index or the advisory feed — the owner has a provisioned API key
-locally; still needs `fly secrets set FINGRID_API_KEY` to go live.
+locally; still needs `fly secrets set FINGRID_API_KEY` to go live. Left
+"shown, not scored" even once live: it's a 1–5 categorical that sits at
+"normal" almost all the time, so the deviation engine's median/MAD would
+mostly see zero variance rather than a scoreable series — a poor fit for
+the trailing-baseline machinery P and C/F use.
 
 ### Changelog
 
+- **infra-v3** (2026-08-10) — added **P**, Finnish spot electricity price,
+  deviation-scored the same way as social's C and climate's F. Prompted by a
+  2026-08-10 HS report on autumn 2026 fixed-contract prices rising on
+  futures pricing in dry Nordic hydro reservoirs and Iran-war-driven gas
+  costs — a real grid-stress signal this domain had no linkage to, despite
+  already polling the raw series (`elec_spot`) for the "Finland-impact
+  panel" since v0. Weights rebalanced to 0.45/0.3/0.25 (V/T/P).
 - **infra-v2** (2026-07-26) — news volume is now the latest **complete UTC
   day** (`gdelt_infra_vol_daily`). The v1 input, `vol24h`, was never a
   24-hour count: at `timespan=30d` GDELT answers in daily buckets, so summing
@@ -961,7 +991,7 @@ adapted for the Nordics, where no equivalent single strait exists.
 | AISStream.io | live AIS, Gulf of Finland/Baltic bbox | free tier, non-commercial | Domain 1 |
 | OpenSky Network | live flights, Gulf of Finland/Baltic bbox | free registered account, ground ADS-B | Domain 1 |
 | GDELT DOC 2.0 | news volume/tone/headlines | free, ≥5 s between calls | Domains 1, 3 |
-| Statistics Finland / pörssisähkö / ECB | Finland-impact prices, electricity, FX | open data | Finland-impact panel |
+| Statistics Finland / pörssisähkö / ECB | Finland-impact prices, electricity, FX | open data | Finland-impact panel; pörssisähkö also scored as Domain 4's P |
 | CARTO + OpenStreetMap | dark basemap tiles | free with attribution | Domain 1 |
 | EUvsDisinfo | — | evaluated, not integrated (see Domain 3 above) | — |
 | *Dormant:* IMF PortWatch | official Hormuz daily transit calls | open data | Hormuz appendix (frozen) |

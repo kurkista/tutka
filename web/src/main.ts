@@ -32,7 +32,7 @@ import {
 // DOM id prefix, which is exactly what the factory parameterizes.
 const hybrid = createDomainPanel('hybrid', ['V', 'T'], true, 'gdelt_hybrid_', '2');
 const infoenv = createDomainPanel('infoenv', ['V', 'T'], false, 'gdelt_infoenv_', '3');
-const infra = createDomainPanel('infra', ['V', 'T'], true, 'gdelt_infra_', '4');
+const infra = createDomainPanel('infra', ['V', 'T', 'P'], true, 'gdelt_infra_', '4');
 const social = createDomainPanel('social', ['V', 'T', 'C'], false, 'gdelt_social_', '5');
 const climate = createDomainPanel('climate', ['V', 'T', 'F'], true, 'gdelt_climate_', '6');
 

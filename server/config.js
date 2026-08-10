@@ -238,18 +238,30 @@ export const NORDIC = {
 // ---------------------------------------------------------------------------
 // Civic & critical infrastructure Index — domain 4 (cyberattacks, energy/
 // grid/water/telecom disruptions). Same GDELT V/T shape as NORDIC/INFOENV,
-// same "no clean daily official series" reasoning. Distinct from those two
-// in one way: it also gets a second, genuinely independent source — NCSC-FI's
-// public warnings RSS feed (see NCSCFI below and pollers/ncscfi.js) — logged
-// as headlines (module 'infra_advisory'), not yet scored into the index
-// itself. Verified 2026-07-24: NCSC-FI's feed is live, structured RSS, no
+// same "no clean daily official series" reasoning. NCSC-FI's public warnings
+// RSS feed (see NCSCFI below and pollers/ncscfi.js) is a second, genuinely
+// independent source, logged as headlines (module 'infra_advisory'), not
+// scored — same "shown, not scored" treatment as domain 1's AIS/OpenSky.
+// Verified 2026-07-24: NCSC-FI's feed is live, structured RSS, no
 // auth/bot-wall. ENISA was considered but not confirmed to have a continuous
 // feed (looked like annual-report-only) — not integrated pending a real check.
-// See indices/infra.js and METHODOLOGY.md.
+//
+// P (electricity price) is a third, genuinely independent source, and the
+// first non-advisory one for this domain: Finnish spot price (pörssisähkö,
+// see ELECTRICITY above and pollers/electricity.js) already flows in at
+// 15-min resolution and has real trailing history, so it's scored the same
+// deviation way as social's C and climate's F rather than left "shown, not
+// scored" like NCSC-FI/EUVD/CERT-EU/Fingrid. Direction 'high': a price spike
+// (dry Nordic hydro reservoirs, gas-driven import costs, nuclear outages) is
+// the concerning side. Honest caveat: price moves for plenty of mundane
+// reasons (routine maintenance, ordinary seasonal demand), so it's a noisier,
+// less specific proxy than V/T's cyberattack-keyword news pressure — this is
+// grid *economic* stress, not an attack signal. Weighted lower than V/T for
+// that reason. See indices/infra.js and METHODOLOGY.md.
 // ---------------------------------------------------------------------------
 export const INFRA = {
-  version: 'infra-v2',
-  weights: { V: 0.6, T: 0.4 },
+  version: 'infra-v3',
+  weights: { V: 0.45, T: 0.3, P: 0.25 },
   bands: DEVIATION_BANDS,
   hysteresisPoints: 2,
   deviation: DEVIATION,
@@ -260,6 +272,10 @@ export const INFRA = {
     // through the jobs/staleness map, which watches the ingest itself.
     V: 52 * 3600_000,
     T: 24 * 3600_000,
+    // ELECTRICITY polls every 3h and each fetch covers the latest ~48h at
+    // 15-min resolution, so a fresh reading should never be more than a few
+    // hours old. 12h gives a few missed polls of slack before dropping it.
+    P: 12 * 3600_000,
   },
   recomputeMs: 5 * 60_000,
   snapshotMs: 15 * 60_000,
