@@ -18,7 +18,7 @@ rather than written at the time, and are marked as such.
 
 ---
 
-## 2026-08-10 · HIGH · Ships (AIS) status read "live" for 5 days while the feed sent nothing · OPEN (status bug fixed, feed outage unresolved)
+## 2026-08-10 · HIGH · Ships (AIS) status read "live" for 5 days while the feed sent nothing · OPEN (status bug fixed; root cause is an AISStream-side outage, nothing left to fix here)
 
 **What happened:**
 Owner reported ships missing from domain 1's map. `nordic_vessels_in_zone`
@@ -51,14 +51,34 @@ Split `connectedAt` (set on `open`, the watchdog's grace-period anchor) from
 within `AIS.stallMs` of now — the same window the watchdog already uses to
 judge a connection stalled, so the two can no longer disagree.
 
-**Still open — needs the owner:** the status bug explains why the outage
-went unnoticed, not why AISStream stopped sending anything. The
-Helsinki–Tallinn corridor is high-traffic; 5 days of total silence on a
-connection that's accepted and error-free reads more like a free-tier
-quota/account issue than a real receiver-coverage gap (the precedent below
-was hours, during an active war, not 5 quiet days). Check the key's status
-on aisstream.io's dashboard; regenerating it is the likely next step if it
-looks throttled or expired.
+**Update 2026-08-11 — root cause confirmed, and the first guess below was
+wrong:** the owner regenerated the AISSTREAM_API_KEY on aisstream.io (the
+old one showed valid:true, but the dashboard's own usage check was failing
+too) and re-deployed it correctly to `tutka` — connection re-established,
+`msgCount` still 0 after several minutes, identical symptom to the old key.
+That rules out an account/quota problem: a *brand-new* key showing the same
+silence means the account was never the issue. AISStream's own GitHub
+issue tracker confirms it's a widespread service outage, not
+account-specific — multiple independent reporters hit the identical
+"connects, subscribes, zero frames" symptom starting the same day ours did:
+[#259](https://github.com/aisstream/issues/issues/259) (2026-08-05),
+[#262](https://github.com/aisstream/issues/issues/262),
+[#263](https://github.com/aisstream/issues/issues/263),
+[#264](https://github.com/aisstream/issues/issues/264) (2026-08-07),
+[#267](https://github.com/aisstream/issues/issues/267) (2026-08-08),
+[#269](https://github.com/aisstream/issues/issues/269) (2026-08-10, title:
+"Stream silent since 2026-08-05 — WS connects + subscribes, zero
+messages"). Nothing left to fix on tutka's side; the map recovers on its
+own once AISStream's service does. (The stray Fly app the first `fly
+secrets set` attempt landed on, `scan-dappled-firefly-6280`, has been
+deleted — an unrelated mistake from running the command outside the
+project directory, not connected to the outage itself.)
+
+**Original (incorrect) guess, left for the record per this log's own
+rule:** the Helsinki–Tallinn corridor is high-traffic, so 5 days of total
+silence on a connection that's accepted and error-free was read as more
+consistent with a free-tier quota/account issue than a real
+receiver-coverage gap. The key swap above disproved this.
 
 **Rule added:** a status flag must answer "is this true right now," not
 "has this ever been true." Any flag built from a monotonic counter
