@@ -18,7 +18,7 @@ rather than written at the time, and are marked as such.
 
 ---
 
-## 2026-08-10 · HIGH · Ships (AIS) status read "live" for 5 days while the feed sent nothing · OPEN (status bug fixed; root cause is an AISStream-side outage, nothing left to fix here)
+## 2026-08-10 · HIGH · Ships (AIS) status read "live" for 5 days while the feed sent nothing · RESOLVED (status bug fixed and deployed; root cause is an AISStream-side outage, nothing left to fix here)
 
 **What happened:**
 Owner reported ships missing from domain 1's map. `nordic_vessels_in_zone`
@@ -87,6 +87,14 @@ it can only ever latch one direction. Same failure shape as the two AIS
 incidents below: a broken feed and a calm world render identically unless
 every *derived* status is checked for whether it can un-latch, not just the
 raw series.
+
+**Update 2026-08-11 — fix deployed:** `fly deploy` shipped the `ais.js`
+change (previously only committed/pushed, not on the running machine).
+Confirmed live via `/api/state`: `modules.nordic.ais.connected: true`,
+`streaming: false` — the site now correctly shows "receivers dark" instead
+of the old false "live" reading. The AISStream-side outage itself is
+unaffected by this deploy and remains outside tutka's control; the map will
+recover once their service does.
 
 ---
 
