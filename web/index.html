@@ -80,9 +80,9 @@
 
         <aside id="right" class="panel">
           <section id="suomi-card">
-            <h2>🇫🇮 <span data-i18n="hilkka.tab">Finland impact</span></h2>
-            <ul id="suomi-card-lines" class="hilkka-lines"><li class="muted">…</li></ul>
-            <p class="fineprint"><a href="#" id="suomi-card-more" data-i18n="hilkka.more">Full breakdown →</a></p>
+            <h2>🇫🇮 <span data-i18n="impact.tab">Finland impact</span></h2>
+            <ul id="suomi-card-lines" class="impact-lines"><li class="muted">…</li></ul>
+            <p class="fineprint"><a href="#" id="suomi-card-more" data-i18n="impact.more">Full breakdown →</a></p>
           </section>
           <section>
             <h2 data-i18n="news.title">News pressure</h2>
@@ -286,21 +286,37 @@
     </div>
   </main>
 
-  <div id="bottom-tabs">
-    <button id="hilkka-tab" class="bottom-tab" aria-expanded="false">🇫🇮 <span data-i18n="hilkka.tab">Finland impact</span></button>
-  </div>
-
-  <div id="hilkka-drawer" class="drawer" hidden>
+  <div id="impact-drawer" class="drawer" hidden>
     <div class="drawer-grid">
       <section>
-        <h2 data-i18n="hilkka.title">What this means for Kerttu</h2>
-        <ul id="hilkka-lines" class="hilkka-lines"><li class="muted">…</li></ul>
-        <p class="fineprint" id="hilkka-persona"></p>
+        <h2 data-i18n="impact.title">What this means for an average Finn</h2>
+        <ul id="impact-lines" class="impact-lines"><li class="muted">…</li></ul>
+        <p class="fineprint" id="impact-basis"></p>
       </section>
       <section>
-        <h2 data-i18n="hilkka.national">Finland, national level</h2>
+        <h2 data-i18n="impact.national">Finland, national level</h2>
         <div id="suomi-tiles" class="counters suomi"></div>
-        <p class="fineprint" data-i18n="hilkka.lag">Fast proxies react in minutes; national statistics lag months — and many other things move them too.</p>
+        <p class="fineprint" data-i18n="impact.lag">Fast proxies react in minutes; national statistics lag months — and many other things move them too.</p>
+      </section>
+      <section>
+        <h2 data-i18n="impact.trends">Finland, over time</h2>
+        <div class="impact-trend">
+          <p class="impact-trend-label" data-i18n="impact.trend.elec">Electricity spot price</p>
+          <div id="impact-chart-elec" class="mini-sparkline"></div>
+        </div>
+        <div class="impact-trend">
+          <p class="impact-trend-label" data-i18n="impact.trend.cpi">Inflation (CPI, y/y)</p>
+          <div id="impact-chart-cpi" class="mini-sparkline"></div>
+        </div>
+        <div class="impact-trend">
+          <p class="impact-trend-label" data-i18n="impact.trend.unemployment">Unemployment rate</p>
+          <div id="impact-chart-unemployment" class="mini-sparkline"></div>
+        </div>
+        <div class="impact-trend">
+          <p class="impact-trend-label" data-i18n="impact.trend.food">Food prices (CPI sub-index)</p>
+          <div id="impact-chart-food" class="mini-sparkline"></div>
+        </div>
+        <p class="fineprint" data-i18n="impact.trendNote">Electricity is 30 days of 15-minute spot prices; the rest are Statistics Finland's monthly releases over the last two years.</p>
       </section>
     </div>
   </div>

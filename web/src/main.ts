@@ -8,7 +8,7 @@ import { initMap, updateVessels, updateFlights, resizeMap } from './map';
 import { activate, onFirstView } from './lazyView';
 import * as status from './panels/status';
 import * as markets from './panels/markets';
-import * as hilkka from './panels/hilkka';
+import * as impact from './panels/impact';
 import * as layers from './panels/layers';
 import * as welcome from './panels/welcome';
 import * as timeline from './panels/timeline';
@@ -61,7 +61,7 @@ async function boot() {
   await status.init(state);
   layers.init(state);
   await markets.init(state);
-  await hilkka.init();
+  await impact.init();
   await timeline.init(state);
   dependencyTimeline.init(state);
   infoenv.init(state.modules.infoenv);
@@ -87,7 +87,7 @@ async function boot() {
     social_index: social.onIndex,
     climate_index: climate.onIndex,
     metric: (m) => {
-      markets.onMetric(m); hilkka.onMetric(m); layers.onMetric(m);
+      markets.onMetric(m); impact.onMetric(m); layers.onMetric(m);
       onInfraMetric(m); onSocialMetric(m); onClimateMetric(m);
     },
     headline: (h: Headline) => {

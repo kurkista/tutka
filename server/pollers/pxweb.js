@@ -63,7 +63,7 @@ export async function pollUnemployment() {
 // Food & non-alcoholic beverages CPI sub-index (StatFin table khi/15b5,
 // coicop "01", 2025=100) — the honest stand-in for "ostoskorin hinta": a real
 // official point figure, not an invented basket. Fetches 60 months so the
-// HILKKA pre-crisis reference month stays in range as time passes, same
+// HOUSEHOLD pre-crisis reference month stays in range as time passes, same
 // reasoning as pump.js's fuel-price fetch.
 export async function pollGroceryPrice() {
   const res = await fetch(STATFIN.groceryUrl, {

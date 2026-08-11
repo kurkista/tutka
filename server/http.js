@@ -17,7 +17,7 @@ import {
 import { jobStatus } from './scheduler.js';
 import { aisStatus } from './ais.js';
 import { bus } from './bus.js';
-import { computeHilkka } from './hilkka.js';
+import { computeImpact } from './impact.js';
 import { flightsSnapshot } from './pollers/opensky.js';
 import { getLatestHotspots } from './pollers/firms.js';
 import { storeGdeltPayload } from './pollers/gdelt.js';
@@ -202,7 +202,7 @@ export function startHttp({ store }) {
     res.json(row);
   });
 
-  app.get('/api/hilkka', (req, res) => res.json(computeHilkka()));
+  app.get('/api/impact', (req, res) => res.json(computeImpact()));
 
   // News relay ingest: the news-relay GitHub Action fetches GDELT from runner
   // IPs (GDELT refuses fly's shared egress IPs) and pushes the raw JSON here,

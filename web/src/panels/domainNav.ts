@@ -10,6 +10,7 @@
 // state is reported; duplicating it here would put two numbers for the same
 // thing on screen at once, and they would disagree the moment one updated.
 import { t } from '../i18n';
+import { toggleImpactDrawer } from './impact';
 
 const DOMAIN_NUMBERS = [1, 2, 3, 4, 5, 6];
 
@@ -33,6 +34,17 @@ export function initDomainNav(): void {
   dependencies.textContent = t('nav.dependencies');
   dependencies.addEventListener('click', () => { location.hash = '#dependencies'; });
   nav.appendChild(dependencies);
+
+  // Was a small bottom-fixed tab, easy to miss — promoted here so it reads
+  // as a peer of Home/Events/Dependencies instead of a hidden extra. It
+  // toggles a drawer rather than routing, so it doesn't touch location.hash.
+  const impactBtn = document.createElement('button');
+  impactBtn.id = 'impact-tab';
+  impactBtn.className = 'domain-nav-btn is-impact';
+  impactBtn.setAttribute('aria-expanded', 'false');
+  impactBtn.innerHTML = `🇫🇮 ${t('impact.tab')}`;
+  impactBtn.addEventListener('click', () => toggleImpactDrawer());
+  nav.appendChild(impactBtn);
 
   for (const n of DOMAIN_NUMBERS) {
     const btn = document.createElement('button');

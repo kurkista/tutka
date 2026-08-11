@@ -1,10 +1,14 @@
-// panels/hilkka.ts — the "Finland impact" drawer: plain-language costs for an
-// average Finnish household, plus national fast proxies. All arithmetic is
-// server-side (/api/hilkka); this file only formats and translates.
+// panels/impact.ts — the "Finland impact" drawer: plain-language costs for
+// an average Finnish household, national fast proxies, and multi-year trend
+// charts for the slower-moving official series. All arithmetic is
+// server-side (/api/impact); this file only formats, translates and charts.
 import { t, fmtNum, fmtDate } from '../i18n';
+import { getSeries } from '../api';
+import { SERIES, makeSimpleSparkline } from '../charts';
+import { onFirstView, activate, trackChart } from '../lazyView';
 
-interface HilkkaData {
-  persona: { tankLiters: number; kmPerMonth: number; litersPer100km: number; kwhPerMonth: number; heatoilLiters: number; preCrisisMonth: string };
+interface ImpactData {
+  household: { tankLiters: number; kmPerMonth: number; litersPer100km: number; kwhPerMonth: number; heatoilLiters: number; preCrisisMonth: string };
   fuel: {
     e95: number | null; diesel: number | null; heatoil: number | null;
     e95Pre: number | null; dieselPre: number | null; heatoilPre: number | null;
@@ -27,27 +31,49 @@ const REFRESH_METRICS = new Set([
 ]);
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
+/** [chart element id, metric, days of history, series colour] */
+const TREND_CHARTS: Array<[string, string, number, string]> = [
+  ['impact-chart-elec', 'elec_spot', 30, SERIES[0]],
+  ['impact-chart-cpi', 'fi_cpi_yoy', 730, SERIES[1]],
+  ['impact-chart-unemployment', 'fi_unemployment_rate', 730, SERIES[2]],
+  ['impact-chart-food', 'fi_grocery_cpi', 730, SERIES[3]],
+];
+
 export async function init(): Promise<void> {
-  const tab = document.getElementById('hilkka-tab')!;
-  const drawer = document.getElementById('hilkka-drawer')!;
-  tab.addEventListener('click', () => {
-    const open = drawer.hasAttribute('hidden');
-    drawer.toggleAttribute('hidden', !open);
-    tab.setAttribute('aria-expanded', String(open));
-  });
   document.getElementById('suomi-card-more')?.addEventListener('click', (e) => {
     e.preventDefault();
     openDrawer();
   });
+  // Charts need a visible, sized container (see lazyView.ts) — the drawer is
+  // `hidden` at boot, so they build the first time it actually opens.
+  onFirstView('impact', async () => {
+    for (const [elId, metric, days, color] of TREND_CHARTS) {
+      try {
+        const series = await getSeries(metric, days);
+        const el = document.getElementById(elId);
+        if (el && series.length > 1) trackChart('impact', makeSimpleSparkline(el, series, color));
+      } catch { /* a trend chart is a bonus — the tiles above already rendered */ }
+    }
+  });
   await refresh();
 }
 
+export function toggleImpactDrawer(): void {
+  const tab = document.getElementById('impact-tab')!;
+  const drawer = document.getElementById('impact-drawer')!;
+  const opening = drawer.hasAttribute('hidden');
+  drawer.toggleAttribute('hidden', !opening);
+  tab.setAttribute('aria-expanded', String(opening));
+  if (opening) void activate('impact');
+}
+
 function openDrawer(): void {
-  const tab = document.getElementById('hilkka-tab')!;
-  const drawer = document.getElementById('hilkka-drawer')!;
+  const tab = document.getElementById('impact-tab')!;
+  const drawer = document.getElementById('impact-drawer')!;
   drawer.removeAttribute('hidden');
   tab.setAttribute('aria-expanded', 'true');
   drawer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  void activate('impact');
 }
 
 export function onMetric(m: { metric: string }): void {
@@ -58,9 +84,9 @@ export function onMetric(m: { metric: string }): void {
 }
 
 async function refresh(): Promise<void> {
-  const res = await fetch('/api/hilkka');
+  const res = await fetch('/api/impact');
   if (!res.ok) return;
-  const d: HilkkaData = await res.json();
+  const d: ImpactData = await res.json();
   renderLines(d);
   renderTiles(d);
 }
@@ -71,70 +97,70 @@ function eur(v: number, digits = 2): string {
 
 function costSpan(v: number, digits = 2, unit = '€'): string {
   const cls = v >= 0 ? 'cost-up' : 'cost-down';
-  return `<span class="${cls}">${eur(v, digits)} ${unit}</span>`;
+  return `<span class="${cls}">${eur(v, digits)} ${unit}</span>`;
 }
 
-function buildLines(d: HilkkaData): string[] {
+function buildLines(d: ImpactData): string[] {
   const lines: string[] = [];
   const f = d.fuel;
 
   if (f.e95 !== null && f.tankExtraEur !== null) {
-    lines.push(t('hilkka.tank', {
+    lines.push(t('impact.tank', {
       price: fmtNum(f.e95, 2),
-      liters: d.persona.tankLiters,
+      liters: d.household.tankLiters,
       delta: costSpan(f.tankExtraEur),
     }));
   }
   if (f.monthlyDrivingExtraEur !== null) {
-    lines.push(t('hilkka.driving', {
-      km: fmtNum(d.persona.kmPerMonth, 0),
+    lines.push(t('impact.driving', {
+      km: fmtNum(d.household.kmPerMonth, 0),
       delta: costSpan(f.monthlyDrivingExtraEur),
     }));
   }
   if (f.diesel !== null && f.dieselTankExtraEur !== null) {
-    lines.push(t('hilkka.diesel', {
+    lines.push(t('impact.diesel', {
       price: fmtNum(f.diesel, 2),
       delta: costSpan(f.dieselTankExtraEur),
     }));
   }
   if (f.heatoil !== null && f.heatoilFillExtraEur !== null) {
-    lines.push(t('hilkka.heatoil', {
+    lines.push(t('impact.heatoil', {
       price: fmtNum(f.heatoil, 2),
-      liters: d.persona.heatoilLiters,
+      liters: d.household.heatoilLiters,
       delta: costSpan(f.heatoilFillExtraEur),
     }));
   }
   if (d.electricity.nowCkwh !== null) {
-    lines.push(t('hilkka.elec', {
+    lines.push(t('impact.elec', {
       now: fmtNum(d.electricity.nowCkwh, 1),
       avg: d.electricity.avg30dCkwh !== null ? fmtNum(d.electricity.avg30dCkwh, 1) : '…',
     }));
   }
   if (d.brent.pct !== null) {
-    lines.push(t('hilkka.brent', {
+    lines.push(t('impact.brent', {
       pct: `${d.brent.pct >= 0 ? '+' : ''}${fmtNum(d.brent.pct, 0)}`,
     }));
   }
   return lines;
 }
 
-function renderLines(d: HilkkaData): void {
+function renderLines(d: ImpactData): void {
   const lines = buildLines(d);
   const html = lines.length
     ? lines.map((l) => `<li>${l}</li>`).join('')
     : `<li class="muted">${t('status.noData')}</li>`;
 
-  document.getElementById('hilkka-lines')!.innerHTML = html;
+  document.getElementById('impact-lines')!.innerHTML = html;
   document.getElementById('suomi-card-lines')!.innerHTML = html;
 
-  document.getElementById('hilkka-persona')!.textContent = t('hilkka.persona', {
-    liters: d.persona.litersPer100km,
-    km: fmtNum(d.persona.kmPerMonth, 0),
+  document.getElementById('impact-basis')!.textContent = t('impact.basis', {
+    liters: d.household.litersPer100km,
+    km: fmtNum(d.household.kmPerMonth, 0),
     month: d.fuel.dataMonthTs ? fmtDate(d.fuel.dataMonthTs) : '…',
   });
 }
 
-function renderTiles(d: HilkkaData): void {
+function renderTiles(d: ImpactData): void {
   const el = document.getElementById('suomi-tiles')!;
   const pct = (v: number | null) =>
     v === null ? '–' : `${v >= 0 ? '+' : ''}${fmtNum(v, 1)} %`;
@@ -152,7 +178,7 @@ function renderTiles(d: HilkkaData): void {
     ],
     [
       pct(d.national.groceryPct),
-      t('suomi.grocery', { month: fmtDate(Date.parse(`${d.persona.preCrisisMonth}-01`)) }),
+      t('suomi.grocery', { month: fmtDate(Date.parse(`${d.household.preCrisisMonth}-01`)) }),
     ],
   ];
   el.innerHTML = tiles

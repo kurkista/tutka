@@ -114,16 +114,28 @@ you visit, see NORMAL, and close has no reason to be revisited. There was no
   log (+log incidences)" meant the latter, and the two were conflated for a
   while, kept distinct here.
 - **Finland impact, made concrete. Built 2026-07-27.** Extended the national
-  tiles in the Kerttu drawer with **unemployment rate** (StatFin `tyti/135z`,
-  the plain published monthly rate) and **food/grocery prices** (StatFin
-  `khi/15b5`, coicop "01" — food & non-alcoholic beverages CPI sub-index,
-  shown as % change vs the same pre-crisis reference month the fuel figures
-  use). "Ostoskorin hinta" was the working name, but there's no official
-  "grocery basket" series — the food CPI sub-index is the honest real-data
-  stand-in, not an invented basket cost. `server/pollers/pxweb.js`
-  (`pollUnemployment`, `pollGroceryPrice`), `server/hilkka.js`
+  tiles in the Finland-impact drawer with **unemployment rate** (StatFin
+  `tyti/135z`, the plain published monthly rate) and **food/grocery prices**
+  (StatFin `khi/15b5`, coicop "01" — food & non-alcoholic beverages CPI
+  sub-index, shown as % change vs the same pre-crisis reference month the
+  fuel figures use). "Ostoskorin hinta" was the working name, but there's no
+  official "grocery basket" series — the food CPI sub-index is the honest
+  real-data stand-in, not an invented basket cost. `server/pollers/pxweb.js`
+  (`pollUnemployment`, `pollGroceryPrice`), `server/impact.js`
   (`national.unemploymentRate`, `national.groceryPct`),
-  `web/src/panels/hilkka.ts` (two new tiles). Both series in `PUBLIC_METRICS`.
+  `web/src/panels/impact.ts` (two new tiles). Both series in `PUBLIC_METRICS`.
+- **Dropped the named personas. 2026-08-11.** The drawer used to be framed
+  around two invented characters ("Hilkka" as the config/module name,
+  "Kerttu Korhonen" as the on-page household). Fictional names added nothing
+  the plain household constants didn't already say, and confused the file
+  layout (`hilkka.js`/`hilkka.ts` for a page that displays as "Finland
+  impact"). Renamed throughout: `HILKKA` → `HOUSEHOLD` (config.js),
+  `server/hilkka.js` → `server/impact.js`, `/api/hilkka` → `/api/impact`,
+  `web/src/panels/hilkka.ts` → `web/src/panels/impact.ts`, drawer copy now
+  reads "What this means for an average Finn." Also promoted the drawer's
+  trigger from a small bottom-fixed tab into the top domain-nav bar (it was
+  easy to miss), and added a third drawer column with two-year trend charts
+  for CPI, unemployment, food prices, and electricity spot price.
 
 ## Tier 2 — surface what's already good. Built 2026-07-27.
 

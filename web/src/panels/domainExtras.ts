@@ -110,7 +110,7 @@ export function initInfoenvExtras(_state: AppState): void {
 }
 
 /** A signed, rounded percentage in this project's established convention
- * (see hilkka.ts) — Intl.NumberFormat already renders the locale's own
+ * (see impact.ts) — Intl.NumberFormat already renders the locale's own
  * minus sign for negatives, so only the '+' needs adding here. */
 function fmtDev(pct: number): string {
   return `${pct >= 0 ? '+' : ''}${fmtNum(pct, 0)}%`;

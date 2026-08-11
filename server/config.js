@@ -778,7 +778,7 @@ export const PORTWATCH = {
 };
 
 // ---------------------------------------------------------------------------
-// Hilkka & Suomi layer (M2) — what the strait means in Finland
+// Finland impact layer (M2) — what the strait means in Finland
 // ---------------------------------------------------------------------------
 export const ELECTRICITY = {
   // Finnish spot electricity, c/kWh incl. VAT, 15-min resolution, free, no key.
@@ -820,9 +820,9 @@ export const FX = {
   pollMs: 6 * 3600_000,
 };
 
-export const HILKKA = {
-  // "Hilkka" is an average Finnish driver/household used to translate the
-  // strait into everyday euros. Constants are deliberately ordinary:
+export const HOUSEHOLD = {
+  // An average Finnish driver/household, used to translate the strait into
+  // everyday euros. Constants are deliberately ordinary — no named persona:
   tankLiters: 50, // a typical full tank
   kmPerMonth: 1500, // average Finnish car does ~17–18k km/year
   litersPer100km: 7.0, // mixed driving, petrol car

@@ -166,6 +166,10 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
 }
 .domain-nav-btn:hover { border-color: var(--muted); color: var(--ink); }
 .domain-nav-btn.active { border-color: var(--accent); color: var(--ink); }
+/* The impact drawer isn't a route, so it can't get .active from setActiveDomain
+   — aria-expanded (which its own click handler already maintains) does the
+   same job. */
+.domain-nav-btn[aria-expanded="true"] { border-color: var(--accent); color: var(--ink); }
 /* The way back is not one of the six — separate it so the eye doesn't read
    seven peers. */
 .domain-nav-btn.is-home { border-color: transparent; margin-right: 4px; }
@@ -367,18 +371,9 @@ dialog p { font-size: 14px; line-height: 1.5; }
 .welcome-actions { display: flex; justify-content: flex-end; gap: 10px; }
 #welcome-dontshow { border-color: var(--muted); }
 
-/* Bottom drawer tabs (Timeline, Kerttu & Suomi) */
-#bottom-tabs {
-  position: fixed; bottom: 37px; left: 50%; transform: translateX(-50%);
-  z-index: 20; display: flex; gap: 8px;
-}
-.bottom-tab {
-  background: var(--surface); color: var(--ink);
-  border: 1px solid var(--border); border-bottom: none;
-  border-radius: 10px 10px 0 0; padding: 6px 18px;
-  font-size: 13px; font-weight: 600; cursor: pointer;
-}
-.bottom-tab:hover { border-color: var(--muted); }
+/* Finland-impact drawer — triggered from the top domain-nav bar (see
+   .domain-nav-btn.is-impact below), slides up from the bottom of the
+   viewport like a bottom sheet. */
 .drawer {
   position: fixed; left: 0; right: 0; bottom: 37px; z-index: 19;
   max-height: 46vh; overflow-y: auto;
@@ -387,23 +382,25 @@ dialog p { font-size: 14px; line-height: 1.5; }
   padding: 16px;
 }
 #timeline-drawer { max-width: 1100px; margin: 0 auto; }
-.drawer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 1100px; margin: 0 auto; }
+.drawer-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; max-width: 1300px; margin: 0 auto; }
 @media (max-width: 980px) { .drawer-grid { grid-template-columns: 1fr; } }
 .drawer h2 {
   font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;
   color: var(--muted); margin: 0 0 8px; font-weight: 600;
 }
-.hilkka-lines { list-style: none; margin: 0; padding: 0; font-size: 14.5px; line-height: 1.5; }
-.hilkka-lines li { padding: 5px 0; border-bottom: 1px solid var(--grid); }
-.hilkka-lines .cost-up { color: var(--status-serious); font-weight: 600; }
-.hilkka-lines .cost-down { color: var(--status-good); font-weight: 600; }
+.impact-lines { list-style: none; margin: 0; padding: 0; font-size: 14.5px; line-height: 1.5; }
+.impact-lines li { padding: 5px 0; border-bottom: 1px solid var(--grid); }
+.impact-lines .cost-up { color: var(--status-serious); font-weight: 600; }
+.impact-lines .cost-down { color: var(--status-good); font-weight: 600; }
 .suomi { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 
 #suomi-card {
   border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
   background: rgba(255, 255, 255, 0.02);
 }
-#suomi-card .hilkka-lines { font-size: 13.5px; }
+#suomi-card .impact-lines { font-size: 13.5px; }
+.impact-trend { margin-bottom: 10px; }
+.impact-trend-label { margin: 0; font-size: 12.5px; color: var(--ink-2); }
 
 /* MapLibre popup, dark */
 .maplibregl-popup-content {

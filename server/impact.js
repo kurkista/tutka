@@ -1,9 +1,9 @@
 // @ts-check
-// hilkka.js — translates the strait situation into everyday Finnish euros.
-// All persona constants live in config.js (HILKKA) and are returned with the
-// numbers so the UI can show its work. Server-side so the arithmetic has one
-// home; the frontend only formats.
-import { HILKKA } from './config.js';
+// impact.js — translates the strait situation into everyday Finnish euros.
+// All household constants live in config.js (HOUSEHOLD) and are returned
+// with the numbers so the UI can show its work. Server-side so the
+// arithmetic has one home; the frontend only formats.
+import { HOUSEHOLD } from './config.js';
 import { latestSeries, seriesSince } from './db.js';
 
 /** value of a monthly series at the pre-crisis reference month */
@@ -20,13 +20,13 @@ function avgSince(metric, sinceTs, untilTs = Infinity) {
   return rows.reduce((a, r) => a + r.value, 0) / rows.length;
 }
 
-export function computeHilkka(now = Date.now()) {
+export function computeImpact(now = Date.now()) {
   const e95 = latestSeries('pump_e95');
   const diesel = latestSeries('pump_diesel');
   const heatoil = latestSeries('pump_heatoil');
-  const e95Pre = atMonth('pump_e95', HILKKA.preCrisisMonth);
-  const dieselPre = atMonth('pump_diesel', HILKKA.preCrisisMonth);
-  const heatoilPre = atMonth('pump_heatoil', HILKKA.preCrisisMonth);
+  const e95Pre = atMonth('pump_e95', HOUSEHOLD.preCrisisMonth);
+  const dieselPre = atMonth('pump_diesel', HOUSEHOLD.preCrisisMonth);
+  const heatoilPre = atMonth('pump_heatoil', HOUSEHOLD.preCrisisMonth);
 
   // fuel deltas (€/L) vs the pre-crisis month
   const dE95 = e95 && e95Pre !== null ? e95.value - e95Pre : null;
@@ -34,7 +34,7 @@ export function computeHilkka(now = Date.now()) {
   const dHeatoil = heatoil && heatoilPre !== null ? heatoil.value - heatoilPre : null;
 
   // Brent now vs the pre-crisis month's average
-  const preStart = Date.parse(`${HILKKA.preCrisisMonth}-01`);
+  const preStart = Date.parse(`${HOUSEHOLD.preCrisisMonth}-01`);
   const preEnd = preStart + 28 * 24 * 3600_000;
   const brentPre = avgSince('brent_usd', preStart, preEnd);
   const brentNow = latestSeries('brent_intraday') ?? latestSeries('brent_usd');
@@ -60,13 +60,13 @@ export function computeHilkka(now = Date.now()) {
   // euro amount — a % change is the honest thing to show, not an invented
   // basket price.
   const groceryNow = latestSeries('fi_grocery_cpi');
-  const groceryPre = atMonth('fi_grocery_cpi', HILKKA.preCrisisMonth);
+  const groceryPre = atMonth('fi_grocery_cpi', HOUSEHOLD.preCrisisMonth);
   const groceryPct = groceryNow && groceryPre
     ? ((groceryNow.value - groceryPre) / groceryPre) * 100
     : null;
 
   return {
-    persona: HILKKA,
+    household: HOUSEHOLD,
     fuel: {
       e95: e95?.value ?? null,
       diesel: diesel?.value ?? null,
@@ -74,18 +74,18 @@ export function computeHilkka(now = Date.now()) {
       e95Pre, dieselPre, heatoilPre,
       dataMonthTs: e95?.ts ?? null,
       // the headline translations
-      tankExtraEur: dE95 !== null ? dE95 * HILKKA.tankLiters : null,
+      tankExtraEur: dE95 !== null ? dE95 * HOUSEHOLD.tankLiters : null,
       monthlyDrivingExtraEur:
-        dE95 !== null ? dE95 * (HILKKA.kmPerMonth / 100) * HILKKA.litersPer100km : null,
-      dieselTankExtraEur: dDiesel !== null ? dDiesel * HILKKA.tankLiters : null,
-      heatoilFillExtraEur: dHeatoil !== null ? dHeatoil * HILKKA.heatoilLiters : null,
+        dE95 !== null ? dE95 * (HOUSEHOLD.kmPerMonth / 100) * HOUSEHOLD.litersPer100km : null,
+      dieselTankExtraEur: dDiesel !== null ? dDiesel * HOUSEHOLD.tankLiters : null,
+      heatoilFillExtraEur: dHeatoil !== null ? dHeatoil * HOUSEHOLD.heatoilLiters : null,
     },
     electricity: {
       nowCkwh: elecNow,
       todayAvgCkwh: elecToday,
       avg30dCkwh: elec30d,
       monthlyCostEur: elecNow !== null && elec30d !== null
-        ? (elec30d / 100) * HILKKA.kwhPerMonth
+        ? (elec30d / 100) * HOUSEHOLD.kwhPerMonth
         : null,
     },
     brent: {
