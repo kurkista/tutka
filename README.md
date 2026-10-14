@@ -1,3 +1,5 @@
+> **Paused 2026-10-14.** The live app and scheduled workflows are off. See [SUNSET.md](SUNSET.md) for the state and how to resurrect it.
+
 # tutka
 
 **A civic/OSINT threat-monitoring platform for Finland.** *Tutka* is Finnish
